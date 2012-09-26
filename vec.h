@@ -43,6 +43,8 @@ class Vec3{
 	
 };
 
+Vec3 operator*(const float& s, const Vec3& v);
+
 /*
 Vec3 operator*(const float& s, const Vec3& v) {
     return v * s; 

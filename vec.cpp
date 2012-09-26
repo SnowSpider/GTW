@@ -237,7 +237,11 @@ void Vec3::rotateZ(float t){
     z = temp[2];
     //return rotmat * (*this);
 }
-    
+
+Vec3 operator*(const float& s, const Vec3& v) {
+    return v * s; 
+}
+
 Vec4::Vec4(float a, float b, float c, float d){
     x = a;
     y = b;

@@ -65,6 +65,8 @@ float phi = 0.0f;
 float altitudeMultiplier = 0.0;
 float moveSpeed = 0.05;
 
+int targetCell = -1;
+
 void renderAxis();
 void createPlanet();
 void initScene();
@@ -204,8 +206,10 @@ void drawSceneGraphics() {
     */
     
     if(drawWireframe){
-        myPlanet.renderCells();
+        //myPlanet.renderCells();
+        //myPlanet.renderSelectionCells();
         //myPlanet.renderWireframe();
+        if(targetCell != -1) myPlanet.renderCell(myPlanet.cells[targetCell-1]);
     }
     /*
     if(drawWireframe){ // Draw the overlay wireframe
@@ -420,6 +424,73 @@ void handleKeypress(unsigned char key, int x, int y) {
     glutPostRedisplay();
 }
 
+Vec3 getGLPos(int x, int y){
+    GLint viewport[4];
+    GLdouble modelview[16];
+    GLdouble projection[16];
+    GLfloat winX, winY, winZ;
+    GLdouble posX, posY, posZ;
+ 
+    glGetDoublev( GL_MODELVIEW_MATRIX, modelview );
+    glGetDoublev( GL_PROJECTION_MATRIX, projection );
+    glGetIntegerv( GL_VIEWPORT, viewport );
+ 
+    winX = (float)x;
+    winY = (float)viewport[3] - (float)y;
+    glReadPixels( x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
+ 
+    gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
+ 
+    return Vec3(posX, posY, posZ);
+}
+
+/*
+// Update the cursor pos
+void PlanetGui::updateCursorPos()
+{
+	// Make a ray from the mouse position
+	Imath::V3f rayP, rayDir;
+
+	// unproject at 2 depths
+	GLdouble x, y, z;	
+
+	// adjust the viewport for unProject to work	
+	m_viewport[1] = 0;
+	m_viewport[0] = 0;
+
+	gluUnProject( m_mouseX, m_viewport[3]-m_mouseY, 0.001,
+				  m_modelView, m_projection, m_viewport,
+				  &x, &y, &z );
+	rayP = Imath::V3f( x, y, z );
+	
+	gluUnProject( m_mouseX, m_viewport[3]-m_mouseY, 0.01,
+				  m_modelView, m_projection, m_viewport,
+				  &x, &y, &z );
+	rayDir = Imath::V3f( x, y, z );
+	
+	// subtract them to get the ray
+	rayDir = rayDir - rayP;
+	rayDir = rayDir.normalize();
+
+	Imath::V3f p;
+	if (m_planet->rayHitPlanet( rayP, rayDir, p ))
+	{
+		m_mouseSurfacePos = p;
+		m_mouseOnSurface = true;
+	}
+	else
+	{		
+		m_mouseOnSurface = false;
+	}			
+
+	// Now, find the hex which contains the cursor
+	if (m_mouseOnSurface)
+	{
+		m_cursorHex = m_planet->getHexIndexFromPoint( m_mouseSurfacePos );
+	}
+}
+*/
+
 void mouseButton(int button, int state, int x, int y){
     y = window_height - y;
     
@@ -428,7 +499,50 @@ void mouseButton(int button, int state, int x, int y){
             leftButtonDown = false; 
             xi = -1;
             yi = -1;
-        } 
+            
+            /*
+            cout << "Cursor position = (" << x << ", " << y << ")" << endl;
+            Vec3 rayP; // Make a ray from the mouse position
+			
+	        rayP = getGLPos(x, y);
+	        
+	        Vec3 unitRadial = rayP - myPlanet.center;
+	        unitRadial.normalize();
+            Vec3 radiusToRayP = center + (unitRadial * radius);
+	        
+	        
+	        
+	        Vec3 rayDir = radiusToRayP;
+	
+	        // subtract them to get the ray
+	        rayDir = rayDir - rayP;
+	        rayDir = rayDir.normalize();
+	        
+	        cout << "Ray origin = (" << rayP[0] << ", " << rayP[1] << ", " << rayP[2] << ")" << endl; 
+	        
+	        Vec3 mouseSurfacePos;
+	        bool mouseOnSurface = false;
+	        cout << "click - ";
+	        Vec3 p;
+	        if (myPlanet.rayHitPlanet( rayP, rayDir, p )){
+		        mouseSurfacePos = p;
+		        mouseOnSurface = true;
+		        cout << "true" << endl;
+	        }
+	        else{		
+		        mouseOnSurface = false;
+		        cout << "false" << endl;
+		        targetCell = -1;
+	        }			
+
+	        // Now, find the cell which contains the cursor
+	        if (mouseOnSurface){
+		        PlanetCell& target = myPlanet.getCellFromPoint( mouseSurfacePos );
+		        targetCell = target.id;
+		        cout << target.id << endl;
+	        }
+	        */
+        }
         else{
             leftButtonDown = true; 
             xi = x;

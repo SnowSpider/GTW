@@ -143,7 +143,6 @@ class PlanetVertex: public Vec3{
         }
         return true;
     }
-    
 };
 
 class PlanetFace{
@@ -215,7 +214,7 @@ class PlanetFace{
 
 class PlanetCell{
     public: 
-    unsigned int id; //same as the center vertex id
+    unsigned int id; 
     unsigned int centerId;
     unsigned int owner; //id of the player who owns the territory
     vector<unsigned int> neighbors; //same as the center vertex neighbors
@@ -501,7 +500,7 @@ class Planet{
     int numCell; // number of cells
 
     VertexList vertices;
-    VertexList rogueVertices;
+    //VertexList rogueVertices; //not used
     FaceList faces;
     CellList cells;
     
@@ -538,11 +537,15 @@ class Planet{
     void render();
     void renderWireframe();
     void generateCells();
+    void renderCell(PlanetCell& c);
     void renderCells();
+    void renderSelectionCells();
     void generateBorder();
     PlanetCell& findCell(float longitude, float latitude);
     void highlightCell(PlanetCell& target);
     void place(Piece& p, float x, float y);
+    bool rayHitPlanet( Vec3 p, Vec3 dir, Vec3& result );
+    PlanetCell& getCellFromPoint( Vec3 surfPos );
 };
 
 #endif

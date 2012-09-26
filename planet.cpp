@@ -5,6 +5,7 @@
 #include <GL/glut.h>
 #endif
 
+#include <algorithm>
 #include <cmath>
 #include "planet.h"
 #include "imageloader.h"
@@ -131,8 +132,11 @@ void Planet::init(){ //char* textureFile, char* terrainFile, float altitudeMulti
     }
     */
     
-    mapFaces();
+    //The order is important in the next two function calls. 
+    //If you call mapFaces() first, you will see rifts in the polar regions,
+    //because mapFaces add some vertices to the vertex list.
     mapTerrain("terrain.bmp", 0.1);
+    mapFaces();
     
     /*
     for(int i=0;i<vertices.size();i++){
@@ -142,9 +146,17 @@ void Planet::init(){ //char* textureFile, char* terrainFile, float altitudeMulti
     */
     
     generateCells();
+    
+    
+    
     cout << "number of vertex = " << vertices.size() << endl;
     cout << "number of face = " << faces.size() << endl;
     cout << "number of cell = " << cells.size() << endl;
+    int num = 0;
+    for(int i=0;i<cells.size();i++){
+        if(cells[i].paramVerts.size()==10) num++;
+    }
+    cout << "number of cells that has 10 paramVerts = " << num << endl;
 }
 
 void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k){
@@ -202,7 +214,7 @@ void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k
                              << "v" << b.id << ","
                              << "v" << c.id << endl;
         */
-        faces._faces.push_back(tempFace);
+        faces.add(tempFace);
         //nf++;
         
     }
@@ -223,7 +235,7 @@ void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k
 void Planet::mapVertex(PlanetVertex& v){
     Vec3 w(v[0], 0.0, v[2]); 
     float latitude; 
-    latitude = v.angle(axis)/PI; //north-south cout << "1...";
+    latitude = v.angle(axis)/PI; //north-south
     float longitude; 
     if(v[0]>0) longitude = (2.0*PI - w.angle(longZero))/PI/2.0; //east-west 
     else longitude = w.angle(longZero)/PI/2.0; 
@@ -281,25 +293,24 @@ void Planet::mapFace(PlanetFace& f){
             newC.longitude++;
             newC.positive = false;
             vertices.add(newC);
-            f.v[2] = newC.id;
+            f.v[2] = newC.id; //critical
         }
         if(b[0]<=0){
             PlanetVertex newB(b);
             newB.longitude++;
             newB.positive = false;
             vertices.add(newB);
-            f.v[1] = newB.id;
+            f.v[1] = newB.id; //critical
         }
         if(a[0]<=0){
             PlanetVertex newA(a);
             newA.longitude++;
             newA.positive = false;
             vertices.add(newA);
-            f.v[0] = newA.id;
+            f.v[0] = newA.id; //critical
         }
         f.positive = false;
     }
-    
 }
 
 void Planet::mapFaces(){
@@ -332,6 +343,18 @@ void Planet::mapTerrain(const char* filename, float unitHeight){
     }
     
     delete image;
+    
+    /*
+    for(int i=0;i<vertices.size();i++){
+        for(int j=i;j<vertices.size();j++){
+            if( vertices[i].longitude == vertices[j].longitude &&
+                vertices[i].latitude == vertices[j].latitude ){
+                vertices[i].altitude = vertices[j].altitude;    
+            }
+        }
+    }
+    */
+    
 }
 
 void Planet::drawFace(PlanetFace& f){
@@ -398,7 +421,7 @@ void Planet::render(){
         float currentLongitude = (vertices[currentFace.v[0]].longitude +
                                   vertices[currentFace.v[1]].longitude +
                                   vertices[currentFace.v[2]].longitude) / 3.0;
-        if(currentLongitude > 0.5){
+        if(currentLongitude < 0.5){
             glBindTexture(GL_TEXTURE_2D, id_darkSide);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -460,6 +483,7 @@ void Planet::generateCells(){
                 //cout << "vertices[n[j]] = (" << vertices[n[j]][0] << "," << vertices[n[j]][1] << "," << vertices[n[j]][0] << ")" << endl;
                 newVert = midpoint(vertices[i], currentNeighbor);
                 //cout << "tempVert = (" << tempVert[0] << "," << tempVert[1] << "," << tempVert[0] << ")" << endl;
+                mapVertex(newVert); //necessary for the sorting part
                 vertices.add(newVert); // NOT shared between cells
                 tempCell.paramVerts.push_back(vertices.currentId - 1);
             }
@@ -467,11 +491,12 @@ void Planet::generateCells(){
                 if( vertices[faces[j].v[0]].equals(vertices[i]) || 
                     vertices[faces[j].v[1]].equals(vertices[i]) || 
                     vertices[faces[j].v[2]].equals(vertices[i]) ){
-                    //newVert = faces[j].center;
+                    //newVert = faces[j].center; //this variable is not updated
                     newVert = midpoint( vertices[faces[j].v[0]], 
-                                         vertices[faces[j].v[1]], 
-                                         vertices[faces[j].v[2]] );
-                    vertices.add(newVert);
+                                        vertices[faces[j].v[1]], 
+                                        vertices[faces[j].v[2]] );
+                    mapVertex(newVert);
+                    vertices.add(newVert); //necessary for the sorting part
                     tempCell.paramVerts.push_back(vertices.currentId - 1);
                 }
             }
@@ -494,12 +519,56 @@ void Planet::generateCells(){
                     }
                 }
             }
+            //At this point, paramVerts may have been sorted clockwise OR counterclockwise.
             tempCell.paramVerts = paramVerts_sorted;
             cells.add(tempCell);
             //cout << "number of paramVerts = " << tempCell.paramVerts.size() << endl;
         }
     }
     //cout << "generateCells() finished." << endl;
+}
+
+void Planet::renderCell(PlanetCell& c){
+    glColor3f(0.0,1.0,0.0);
+    vector<unsigned int> p = c.paramVerts;
+    Vec3 triCenter = vertices[c.centerId];
+    Vec3 triNormal = triCenter - center;
+    
+    for(int j=0;j<p.size();j++){            
+        glBegin(GL_LINES);
+        glLineWidth( 3.0f );
+        glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+        glVertex3d(vertices[p[j]][0], vertices[p[j]][1], vertices[p[j]][2]);
+        if(j+1==p.size()){
+            glVertex3d(vertices[p[0]][0], vertices[p[0]][1], vertices[p[0]][2]);
+        }
+        else{
+            glVertex3d(vertices[p[j+1]][0], vertices[p[j+1]][1], vertices[p[j+1]][2]);
+        }
+        glEnd();
+            
+        /*
+        //for debugging
+        Vec3 temp = vertices[p[j]];
+        glBegin(GL_LINES);
+        glVertex3d(center[0], center[1], center[2]);
+        glVertex3d(temp[0], temp[1], temp[2]);
+        glEnd();
+        */
+        /*
+        //for debugging
+        Vec3 a = vertices[p[j]];
+        for(int l=0;l<p.size();l++){ // need optimization; paramVerts need to be sorted counterclockwise
+            Vec3 b = vertices[p[l]];
+            glBegin(GL_TRIANGLES);
+                glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+                glVertex3d(a[0], a[1], a[2]); 
+                glVertex3d(b[0], b[1], b[2]);
+                glVertex3d(triCenter[0], triCenter[1], triCenter[2]); 
+            glEnd();
+        }
+        */
+    }
 }
 
 void Planet::renderCells(){
@@ -535,15 +604,24 @@ void Planet::renderCells(){
     
     glColor3f(0.0,1.0,0.0);
     for(int i=0;i<cells.size();i++){
+        renderCell(cells[i]);
+    }
+}
+
+int red = 0;
+int green = 0;
+int blue = 0;
+
+void Planet::renderSelectionCells(){
+    glDisable(GL_LIGHTING);
+    glColor3f(1.0,0.0,0.0);
+    for(int i=0;i<cells.size();i++){
         PlanetCell tempCell = cells[i];
         vector<unsigned int> p = tempCell.paramVerts;
         Vec3 triCenter = vertices[tempCell.centerId];
-        Vec3 triNormal = triCenter - center;
-        
+        glBegin(GL_TRIANGLE_FAN); //paramVerts need to be sorted counterclockwise
+        glVertex3d(triCenter[0], triCenter[1], triCenter[2]);
         for(int j=0;j<p.size();j++){
-            
-            glBegin(GL_LINES);
-            glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
             glVertex3d(vertices[p[j]][0], vertices[p[j]][1], vertices[p[j]][2]);
             if(j+1==p.size()){
                 glVertex3d(vertices[p[0]][0], vertices[p[0]][1], vertices[p[0]][2]);
@@ -551,29 +629,30 @@ void Planet::renderCells(){
             else{
                 glVertex3d(vertices[p[j+1]][0], vertices[p[j+1]][1], vertices[p[j+1]][2]);
             }
-            glEnd();
-            
-            /*
-            Vec3 temp = vertices[p[j]];
-            glBegin(GL_LINES);
-            glVertex3d(center[0], center[1], center[2]);
-            glVertex3d(temp[0], temp[1], temp[2]);
-            glEnd();
-            */
-            /*
-            Vec3 a = vertices[p[j]];
-            for(int l=0;l<p.size();l++){ // need optimization; paramVerts need to be sorted counterclockwise
-                Vec3 b = vertices[p[l]];
-                glBegin(GL_TRIANGLES);
-                    glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
-                    glVertex3d(a[0], a[1], a[2]); 
-                    glVertex3d(b[0], b[1], b[2]);
-                    glVertex3d(triCenter[0], triCenter[1], triCenter[2]); 
-                glEnd();
-            }
-            */
         }
+        glEnd();
+        
+        //needs to be optimized
+        /*
+        vector<unsigned int> p2 = p;
+        reverse( p2.begin(), p2.end() );
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex3d(triCenter[0], triCenter[1], triCenter[2]);
+        for(int j=0;j<p2.size();j++){
+            glVertex3d(vertices[p2[j]][0], vertices[p2[j]][1], vertices[p2[j]][2]);
+            if(j+1==p.size()){
+                glVertex3d(vertices[p2[0]][0], vertices[p2[0]][1], vertices[p2[0]][2]);
+            }
+            else{
+                glVertex3d(vertices[p2[j+1]][0], vertices[p2[j+1]][1], vertices[p2[j+1]][2]);
+            }
+        }
+        glEnd();
+        */
+        //needs to be optimized
+        
     }
+    glEnable(GL_LIGHTING);
 }
 
 void Planet::generateBorder(){
@@ -615,11 +694,86 @@ void Planet::highlightCell(PlanetCell& target){
     
 }
 
-void place(Piece& p, float x, float y){
+void Planet::place(Piece& p, float x, float y){
+    
+}
+
+void fuck(Vec3 a, Vec3 b, Vec3 c){
+    a[0] = b[0] - c[0];
+    a[1] = b[1] - c[1];
+    a[2] = b[2] - c[2];
+}
+
+bool rayIntersectsTriangle(Vec3 p, Vec3 d, Vec3 v0, Vec3 v1, Vec3 v2) {
+	Vec3 e1, e2, h, s, q;
+	float a, f, u, v;
+	fuck(e1,v1,v0);
+	fuck(e2,v2,v0);
+
+	h = d.cross(e2);
+	a = e1.dot(h);
+
+	if (a > -0.00001 && a < 0.00001)
+		return(false);
+
+	f = 1/a;
+	fuck(s,p,v0);
+	u = f * s.dot(h);
+
+	if (u < 0.0 || u > 1.0)
+		return(false);
+
+	q = s.cross(e1);
+	v = f * d.dot(q);
+
+	if (v < 0.0 || u + v > 1.0)
+		return(false);
+
+    
+	// at this stage we can compute t to find out where
+	// the intersection point is on the line
+	float t = f * e2.dot(q);
+
+	if (t > 0.00001) // ray intersection
+		return(true);
+
+	else // this means that there is a line intersection
+		 // but not a ray intersection
+		 return (false);
     
 }
 
 
+// Returns a point on the planet's surface given a ray
+bool Planet::rayHitPlanet( Vec3 p, Vec3 d, Vec3& result ){ 
+    bool temp = false;
+    
+    for(int i=0;i<faces.size();i++){
+        PlanetFace& currentFace = faces[i];
+        temp = rayIntersectsTriangle(p, d, vertices[currentFace.v[0]],
+                                           vertices[currentFace.v[1]],
+                                           vertices[currentFace.v[2]] );
+        if(temp){
+            return true;
+        }
+    }
+    return false;
+}
 
-
+PlanetCell& Planet::getCellFromPoint( Vec3 surfPos ){
+    int best_hex = 0;
+    
+    float minAngle = 2 * PI;
+    
+    // clever cheat -- just use the dot product to find the 
+    // smallest angle -- and thus the containing hex
+    for (int i = 0; i < cells.size(); i++){
+        float currentAngle = vertices[cells[i].centerId].angle(surfPos);
+        if (currentAngle < minAngle){
+            best_hex = i;
+            minAngle = currentAngle;
+        }
+    }
+    return cells[best_hex];
+}
 
