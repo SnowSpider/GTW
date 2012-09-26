@@ -21,6 +21,7 @@ class Mat3{
 	float& operator []( int i );
     float operator []( int i ) const;
 	Vec3 operator*( const Vec3& v ) const;
+	void setIdentity();
 };
 
 /*

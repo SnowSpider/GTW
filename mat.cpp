@@ -10,15 +10,15 @@
 using namespace std;
 
 Mat3::Mat3(){ 
-    m[0] = 0.0;
+    m[0] = 1.0;
 	m[1] = 0.0;
     m[2] = 0.0;
     m[3] = 0.0;
-    m[4] = 0.0;
+    m[4] = 1.0;
     m[5] = 0.0;
     m[6] = 0.0;
     m[7] = 0.0;
-    m[8] = 0.0;
+    m[8] = 1.0;
 }
     
 Mat3::Mat3( const float m0, const float m3, const float m6,
@@ -52,6 +52,18 @@ Vec3 Mat3::operator*( const Vec3& v ) const {
     return result;
 }
 
+
+void Mat3::setIdentity(){
+    m[0] = 1.0;
+	m[1] = 0.0;
+    m[2] = 0.0;
+    m[3] = 0.0;
+    m[4] = 1.0;
+    m[5] = 0.0;
+    m[6] = 0.0;
+    m[7] = 0.0;
+    m[8] = 1.0;
+}
 
 Mat4::Mat4(){
     memset(mat, 0, sizeof(float) * 16);
@@ -102,10 +114,13 @@ float Mat4::operator []( int i ) const {
 
 //Basic transformations
 Mat4 Mat4::CreateIdentity(){
+    /*
     Mat4 pOut(1,0,0,0,
               0,1,0,0,
               0,0,1,0,
               0,0,0,1);
+    */
+    Mat4 pOut; //already identity
     return pOut;
 }
 

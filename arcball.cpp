@@ -1,94 +1,108 @@
-#include <GL/gl.h>                                                // Header File For The OpenGL32 Library
-#include <GL/glu.h>                                                // Header File For The GLu32 Library
+#include <GL/gl.h>												// Header File For The OpenGL32 Library
+#include <GL/glu.h>												// Header File For The GLu32 Library
 #include <stdio.h>
 
-#include "math.h"                                               // Needed for sqrt
+#include "math.h"                                               // Needed for sqrtf
 
 #include "arcball.h"                                            // ArcBall header
-
-# define Epsilon 1.0e-5
 
 //Arcball sphere constants:
 //Diameter is       2.0f
 //Radius is         1.0f
 //Radius squared is 1.0f
 
-void ArcBall::mapToSphere(const Vec2& newPt, Vec3& newVec) const {
-    Vec2 tempPt;
+void ArcBall_t::_mapToSphere(const Point2fT* NewPt, Vector3fT* NewVec) const
+{
+    Point2fT TempPt;
     GLfloat length;
 
     //Copy paramter into temp point
-    tempPt = newPt;
+    TempPt = *NewPt;
 
     //Adjust point coords and scale down to range of [-1 ... 1]
-    tempPt.x  = (tempPt.x * adjustWidth)  - 1.0f;
-    tempPt.y  = 1.0f - (tempPt.y * adjustHeight);
+    TempPt.s.X  =        (TempPt.s.X * this->adjustWidth)  - 1.0f;
+    TempPt.s.Y  = 1.0f - (TempPt.s.Y * this->adjustHeight);
 
     //Compute the square of the length of the vector to the point from the center
-    length = tempPt.length2();
+    length      = (TempPt.s.X * TempPt.s.X) + (TempPt.s.Y * TempPt.s.Y);
 
     //If the point is mapped outside of the sphere... (length > radius squared)
-    if (length > 1.0f){
+    if (length > 1.0f)
+    {
         GLfloat norm;
 
         //Compute a normalizing factor (radius / sqrt(length))
-        norm  = 1.0f / sqrt(length);
+        norm    = 1.0f / FuncSqrt(length);
 
         //Return the "normalized" vector, a point on the sphere
-        newVec.x = tempPt.x * norm;
-        newVec.y = tempPt.y * norm;
-        newVec.z = 0.0f;
+        NewVec->s.X = TempPt.s.X * norm;
+        NewVec->s.Y = TempPt.s.Y * norm;
+        NewVec->s.Z = 0.0f;
     }
-    else{    //Else it's on the inside
+    else    //Else it's on the inside
+    {
         //Return a vector to a point mapped inside the sphere sqrt(radius squared - length)
-        newVec.x = tempPt.x;
-        newVec.y = tempPt.y;
-        newVec.z = sqrt(1.0f - length);
+        NewVec->s.X = TempPt.s.X;
+        NewVec->s.Y = TempPt.s.Y;
+        NewVec->s.Z = FuncSqrt(1.0f - length);
     }
 }
 
 //Create/Destroy
-ArcBall::ArcBall(GLfloat newWidth, GLfloat newHeight){
+ArcBall_t::ArcBall_t(GLfloat NewWidth, GLfloat NewHeight)
+{
     //Clear initial values
-    stVec.clear();
-    enVec.clear();
+    this->StVec.s.X     =
+    this->StVec.s.Y     = 
+    this->StVec.s.Z     = 
+
+    this->EnVec.s.X     =
+    this->EnVec.s.Y     = 
+    this->EnVec.s.Z     = 0.0f;
 
     //Set initial bounds
-    setBounds(newWidth, newHeight);
+    this->setBounds(NewWidth, NewHeight);
 }
 
 //Mouse down
-void ArcBall::click(const Vec2& newPt){
+void    ArcBall_t::click(const Point2fT* NewPt)
+{
     //Map the point to the sphere
-    mapToSphere(newPt, stVec);
+    this->_mapToSphere(NewPt, &this->StVec);
 }
 
 //Mouse drag, calculate rotation
-void ArcBall::drag(const Vec2& newPt, Quat& newRot){
+void    ArcBall_t::drag(const Point2fT* NewPt, Quat4fT* NewRot)
+{
     //Map the point to the sphere
-    mapToSphere(newPt, enVec);
+    this->_mapToSphere(NewPt, &this->EnVec);
 
     //Return the quaternion equivalent to the rotation
-    Vec3 perp;
+    if (NewRot)
+    {
+        Vector3fT  Perp;
 
-    //Compute the vector perpendicular to the begin and end vectors
-    perp = stVec ^ enVec;
+        //Compute the vector perpendicular to the begin and end vectors
+        Vector3fCross(&Perp, &this->StVec, &this->EnVec);
 
-    //Compute the length of the perpendicular vector
-    if (perp.length() > Epsilon){    //if its non-zero
-        //We're ok, so return the perpendicular vector as the transform after all
-        newRot.x = perp.x;
-        newRot.y = perp.y;
-        newRot.z = perp.z;
-        //In the quaternion values, w is cosine (theta / 2), where theta is rotation angle
-        newRot.w = stVec * enVec;
-    }
-    else{                                    //if its zero
-        //The begin and end vectors coincide, so return an identity transform
-        newRot.x = 
-        newRot.y = 
-        newRot.z = 
-        newRot.w = 0.0f;
+        //Compute the length of the perpendicular vector
+        if (Vector3fLength(&Perp) > Epsilon)    //if its non-zero
+        {
+            //We're ok, so return the perpendicular vector as the transform after all
+            NewRot->s.X = Perp.s.X;
+            NewRot->s.Y = Perp.s.Y;
+            NewRot->s.Z = Perp.s.Z;
+            //In the quaternion values, w is cosine (theta / 2), where theta is rotation angle
+            NewRot->s.W= Vector3fDot(&this->StVec, &this->EnVec);
+        }
+        else                                    //if its zero
+        {
+            //The begin and end vectors coincide, so return an identity transform
+            NewRot->s.X = 
+            NewRot->s.Y = 
+            NewRot->s.Z = 
+            NewRot->s.W = 0.0f;
+        }
     }
 }
 

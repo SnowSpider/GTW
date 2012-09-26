@@ -20,7 +20,7 @@
 using namespace std;
 
 // Window size
-int window_width = 800, window_height = 600;
+int window_width = 640, window_height = 480;
 float window_aspect = (float)window_width / (float)window_height;
 
 // Planet parameters
@@ -28,7 +28,7 @@ Vec3 center(0.0,0.0,0.0);
 Vec3 axis(0.0, 1.0, 0.0); 
 Vec3 longitude_zero(0.0, 0.0, 1.0); 
 float radius = 1.0;
-int k = 0;
+int k = 3;
 
 Planet myPlanet(center, axis, longitude_zero, radius, k);
 
@@ -47,11 +47,22 @@ Quat curQuat;
 
 const float PIOVER180 = 3.14159265/180.f;
 
-ArcBall ArcBall(640.0f, 480.0f);
-Vec2 curMousePos;
-bool isClicked  = false; // Clicking The Mouse?
-bool isRClicked = false; // Clicking The Right Mouse Button?
-bool isDragging = false; // Dragging The Mouse?
+// User Defined Variables
+
+Matrix4fT   transform   = {  1.0f,  0.0f,  0.0f,  0.0f, // NEW: Final transform
+                             0.0f,  1.0f,  0.0f,  0.0f,
+                             0.0f,  0.0f,  1.0f,  0.0f,
+                             0.0f,  0.0f,  0.0f,  1.0f };
+
+Matrix3fT   lastRot     = {  1.0f,  0.0f,  0.0f, // NEW: Last Rotation
+                             0.0f,  1.0f,  0.0f,
+                             0.0f,  0.0f,  1.0f };
+
+Matrix3fT   curRot     = {  1.0f,  0.0f,  0.0f, // NEW: This Rotation
+                             0.0f,  1.0f,  0.0f,
+                             0.0f,  0.0f,  1.0f };
+ArcBallT ArcBall(640.0f, 480.0f);
+Point2fT    MousePt;
 
 // Debugging flags
 bool drawPlanet = true;
@@ -62,6 +73,7 @@ float xi, yi;
 bool leftButtonDown = false;
 bool middleButtonDown = false;
 bool rightButtonDown = false;
+bool isDragging = false; // Dragging The Mouse?
 
 float zoom = 0.0; // distance from the planet center
 float rotX = 0.0; // angle offset, up/down
@@ -82,6 +94,34 @@ void handleKeyPress(unsigned char key, int x, int y);
 void mouseButton(int button, int state, int x, int y);
 void mouseMotion(int x, int y);
 void idle();
+
+void motionUpdate (){ // Perform Motion Updates Here
+    if (rightButtonDown){ // If Right Mouse Clicked, Reset All Rotations
+        Matrix3fSetIdentity(&lastRot); // Reset Rotation
+        Matrix3fSetIdentity(&curRot); // Reset Rotation
+        Matrix4fSetRotationFromMatrix3f(&transform, &curRot); // Reset Rotation
+    }
+
+    if (!isDragging){ // Not Dragging
+        if (leftButtonDown){ // First Click
+            isDragging = true; // Prepare For Dragging
+            lastRot = curRot; // Set Last Static Rotation To Last Dynamic One
+            ArcBall.click(&MousePt); // Update Start Vector And Prepare For Dragging
+        }
+    }
+    else{
+        if (leftButtonDown){ // Still Clicked, So Still Dragging
+            Quat4fT     ThisQuat;
+            ArcBall.drag(&MousePt, &ThisQuat); // Update End Vector And Get Rotation As Quaternion
+            //cout << "ThisQuat = (" << ThisQuat.s.X << "," << ThisQuat.s.Y << "," << ThisQuat.s.Z << "," << ThisQuat.s.W << ")" << endl;
+            Matrix3fSetRotationFromQuat4f(&curRot, &ThisQuat); // Convert Quaternion Into Matrix3fT
+            Matrix3fMulMatrix3f(&curRot, &lastRot); // Accumulate Last Rotation Into This One
+            Matrix4fSetRotationFromMatrix3f(&transform, &curRot); // Set Our Final transform's Rotation From This One
+        }
+        else // No Longer Dragging
+            isDragging = false;
+    }
+}
 
 float z(float x, float y){
     float x2 = x*x;
@@ -107,7 +147,7 @@ void trackballRotate(float x1, float y1, float x2, float y2){
     Vec3 normal = v1 ^ v2;
     float theta = acos(v1*v2);
     rotQuat.fromAxis(normal, theta);
-    cout << "Axis of rotation = " << normal << endl;
+ //cout << "Axis of rotation = " << normal << endl;
     curQuat = lastQuat * rotQuat;
     lastQuat = curQuat;
 }
@@ -150,25 +190,25 @@ void buildPlanet(){
 }
 
 void drawScene(void){
+    motionUpdate();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear Screen And Depth Buffer
     glLoadIdentity(); // Reset The Current Modelview Matrix
     glTranslatef(0.0f,0.0f,-6.0f); // Move Into The Screen 6.0
 
-    glPushMatrix(); // NEW: Prepare Dynamic Transform
-        glMultMatrixf((GLfloat*)curQuat.getMatrix().mat); // NEW: Apply Dynamic Transform
+    glPushMatrix(); // NEW: Prepare Dynamic transform
+ //glMultMatrixf((GLfloat*)curQuat.getMatrix().mat); // NEW: Apply Dynamic transform
+        glMultMatrixf(transform.M);    
         if(drawAxis) myPlanet.renderAxis();
         if(drawPlanet){
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
             myPlanet.renderEarth();
         }
-    glPopMatrix(); // NEW: Unapply Dynamic Transform
+    glPopMatrix(); // NEW: Unapply Dynamic transform
     
     glFlush (); // Flush The GL Rendering Pipeline
 }
 
 void display(){
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- //drawRotatedScene();
     drawScene();
     glutSwapBuffers();
 }
@@ -178,16 +218,9 @@ void resize(int w, int h){
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
-    
- // Place the camera down the Z axis looking at the origin.
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
-    /*
-    gluLookAt(0, 0, 2.4 + 1.0,
-              0, 0, 0,
-              0, 1, 0);
-    */
+    ArcBall.setBounds((GLfloat)w, (GLfloat)h);
 }
 
 void handleKeyPress(unsigned char key, int x, int y){
@@ -237,8 +270,7 @@ void handleKeyPress(unsigned char key, int x, int y){
 }
 
 void mouseButton(int button, int state, int x, int y){
-    y = window_height - y;
-    
+    //y = window_height - y;
     if(button == GLUT_LEFT_BUTTON){ // orbitCam
         if(state == GLUT_UP){
             leftButtonDown = false; 
@@ -249,8 +281,8 @@ void mouseButton(int button, int state, int x, int y){
             leftButtonDown = true; 
             xi = x;
             yi = y;
-            curMousePos.x = x;
-            curMousePos.y = y;
+            MousePt.s.X = x;
+            MousePt.s.Y = y;
         }
     }
     if(button == GLUT_MIDDLE_BUTTON){ // panObj
@@ -282,17 +314,30 @@ void mouseButton(int button, int state, int x, int y){
 }
 
 void mouseMotion(int x, int y){
-    y = window_height - y;
+ //y = window_height - y;
     
     if(leftButtonDown){
-        trackballRotate(xi, yi, x, y);
-        
+ //trackballRotate(xi, yi, x, y);
         float deltaX = x - xi;
         float deltaY = y - yi;
         rotY += (deltaX * 0.1);
         rotX += (deltaY * 0.1);
         xi = x;
         yi = y;
+        MousePt.s.X = x;
+        MousePt.s.Y = y;
+        cout << "MousePT = (" << x << "," << y << ")" << endl; 
+        /*
+        cout << "transform = |" << transform.s.M00 << "\t" << transform.s.M10 << "\t" <<transform.s.M20 << "\t" <<transform.s.M30 <<"\t|" << endl
+             << "            |" << transform.s.M01 << "\t" << transform.s.M11 << "\t" <<transform.s.M21 << "\t" <<transform.s.M31 <<"\t|" << endl
+             << "            |" << transform.s.M02 << "\t" << transform.s.M12 << "\t" <<transform.s.M22 << "\t" <<transform.s.M32 <<"\t|" << endl
+             << "            |" << transform.s.M03 << "\t" << transform.s.M13 << "\t" <<transform.s.M23 << "\t" <<transform.s.M33 <<"\t|" << endl;
+        */
+        /*
+        cout << "curRot = |" << curRot.s.M00 << "\t" << curRot.s.M10 << "\t" <<curRot.s.M20 <<"\t|" << endl
+             << "         |" << curRot.s.M01 << "\t" << curRot.s.M11 << "\t" <<curRot.s.M21 <<"\t|" << endl
+             << "         |" << curRot.s.M02 << "\t" << curRot.s.M12 << "\t" <<curRot.s.M22 <<"\t|" << endl;
+        */
     }
     
     if(middleButtonDown){
@@ -310,7 +355,7 @@ void mouseMotion(int x, int y){
         yi = y;
     }
     
-
+    
     glutPostRedisplay(); // let glut know to redraw the screen
 }
 
