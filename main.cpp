@@ -19,21 +19,15 @@
 
 using namespace std;
 
+#define PIOVER180 0.01745329252
+#define PICK_TOL 1.0
+#define PICK_BUFFER_SIZE 1024
+
 // Window size
 int window_width = 640, window_height = 480;
 float window_aspect = (float)window_width / (float)window_height;
 
-// Planet parameters
-Vec3 center(0.0,0.0,0.0); 
-Vec3 axis(0.0, 1.0, 0.0); 
-Vec3 longitude_zero(0.0, 0.0, 1.0); 
-float radius = 1.0;
-int k = 3;
-
-Planet myPlanet(center, axis, longitude_zero, radius, k);
-
-// User Defined Variables
-
+// ArcBall variables
 Mat4 transform ( 1.0f,  0.0f,  0.0f,  0.0f, // NEW: Final transform
                  0.0f,  1.0f,  0.0f,  0.0f,
                  0.0f,  0.0f,  1.0f,  0.0f,
@@ -49,10 +43,22 @@ Mat3 curRot ( 1.0f,  0.0f,  0.0f, // NEW: This Rotation
 ArcBall myArcBall(640.0f, 480.0f);
 Vec2 MousePt;
 
+// Planet parameters
+Vec3 center(0.0,0.0,0.0); 
+Vec3 axis(0.0, 1.0, 0.0); 
+Vec3 longitude_zero(0.0, 0.0, 1.0); 
+float radius = 1.0;
+int k = 4;
+
+Planet myPlanet(center, axis, longitude_zero, radius, k);
+
 // Debugging flags
 bool drawPlanet = true;
-bool drawWireframe = true;
+bool drawWireframe = false;
 bool drawAxis = true;
+bool drawCell = false;
+bool drawBoundingBox = true;
+bool drawSkybox = true;
 
 float xi, yi;
 bool leftButtonDown = false;
@@ -61,14 +67,31 @@ bool rightButtonDown = false;
 bool isDragging = false; // Dragging The Mouse?
 
 float zoom = 0.0; // distance from the planet center
-float rotX = 0.0; // angle offset, up/down
-float rotY = 0.0; // angle offset, left/right
-float shiftX = 0.0;
-float shiftY = 0.0;
+
+Quat lastQuat, rotQuat, curQuat;
+Vec3 cursorPos(0.0f, 0.0f, 0.0f);
+Vec3 cursorDir;
+
+size_t cursorCellId = 0;
+
+Vec3 cursorRadial;
+
+unsigned int PickBuffer[PICK_BUFFER_SIZE]; // picking buffer
+
+size_t selectionCounter = 0;
+bool siloSelected = false;
+bool targetSelected = false;
 
 void initGL();
-void drawBoundingBox();
+void renderBoundingBox();
+void renderSkybox();
 void buildPlanet();
+float z(float x, float y);
+Vec3 trackballProject(float x, float y);
+void trackballRotate(float x1, float y1, float x2, float y2);
+void trackballRotate_mouse(Vec3 v1, Vec3 v2);
+void rotateScene_hrot(float offset);
+void rotateScene_vrot(float offset);
 void drawScene();
 void resize(int w, int h);
 void translateX(float offset);
@@ -78,6 +101,7 @@ void rotateX(float offset);
 void rotateY(float offset);
 void handleKeyPress(unsigned char key, int x, int y);
 Vec3 getGLPos(int x, int y);
+void getGLPosDir(int x, int y, Vec3& rayPos, Vec3& rayDir);
 void motionUpdate();
 void mouseButton(int button, int state, int x, int y);
 void mouseMotion(int x, int y);
@@ -94,29 +118,32 @@ void initGL(){
     static const GLfloat light0_diffuse[] = {0.9f, 0.9f, 0.9f, 0.9f};   
     static const GLfloat light0_direction[] = {1.0f, 1.0f, 1.4f, 0.0f};    
 
- // Enable depth buffering for hidden surface removal.
+    // Enable depth buffering for hidden surface removal.
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_DEPTH_TEST);
 
- // Cull back faces.
+    // Cull back faces.
     glCullFace(GL_BACK);
     glEnable(GL_CULL_FACE);
 
- // Setup other misc features.
+    // Setup other misc features.
     glEnable(GL_LIGHTING);
     glEnable(GL_NORMALIZE);
     glShadeModel(GL_FLAT);
 
- // Setup lighting model.
+    // Setup lighting model.
     glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);    
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, light_model_ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
     glLightfv(GL_LIGHT0, GL_POSITION, light0_direction);
     glEnable(GL_LIGHT0);
+    
+    // GL selection buffer.
+    glSelectBuffer( PICK_BUFFER_SIZE, PickBuffer );
 }
 
-void drawBoundingBox(){
+void renderBoundingBox(){
     glDisable(GL_LIGHTING);
     glBegin(GL_LINES);
     {
@@ -153,29 +180,101 @@ void drawBoundingBox(){
     glEnable(GL_LIGHTING);
 }
 
+void renderSkybox(){
+    
+}
+
 void buildPlanet(){
     myPlanet.init();
+}
+
+float z(float x, float y){
+    float x2 = x*x;
+    float y2 = y*y;
+    float r2 = 1.0;
+    if(x2 + y2 <= r2 * 0.5){
+        return sqrt( r2 - (x2 + y2) );
+    }
+    else{
+        return r2 * 0.5 / sqrt(x2 + y2);
+    }
+}
+
+Vec3 trackballProject(float x, float y){
+    //x = x - window_width * 0.5 - center[0];
+    //y = y - window_height * 0.5 - center[1];
+    return Vec3(x, y, z(x,y)).normalize();
+}
+
+void trackballRotate(float x1, float y1, float x2, float y2){
+    Vec3 v1 = trackballProject(x1, y1);
+    Vec3 v2 = trackballProject(x2, y2);
+    Vec3 normal = v1 ^ v2;
+    float theta = acos(v1*v2);
+    rotQuat.fromAxis(normal, theta);
+    curQuat = lastQuat * rotQuat;
+    lastQuat = curQuat;
+}
+
+void trackballRotate_mouse(Vec3 v1, Vec3 v2){
+    Vec3 normal = v1 ^ v2;
+    float theta = acos(v1*v2);
+    rotQuat.fromAxis(normal, theta);
+    curQuat = lastQuat * rotQuat;
+    lastQuat = curQuat;
+}
+
+void rotateScene_hrot(float offset){
+    trackballRotate(0.0, 0.0, offset, 0.0);
+}
+
+void rotateScene_vrot(float offset){
+    trackballRotate(0.0, 0.0, 0.0, offset);
 }
 
 void drawScene(void){
     motionUpdate();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear Screen And Depth Buffer
     glLoadIdentity(); // Reset The Current Modelview Matrix
-    glTranslatef(0.0f,0.0f,-3.0f); // Move Into The Screen 3.0
+    
+    glTranslatef(0.0f, 0.0f, -3.0f); // Move Into The Screen 3.0
     glTranslatef(0.0f, 0.0f, -zoom);
-        
-    glPushMatrix(); // NEW: Prepare Dynamic transform
+    
+    /*
+    glPointSize(5.0);
+    glDisable(GL_LIGHTING);
+    glBegin(GL_POINTS);
+        glColor3f(1, 0, 0);
+        glVertex3f(cursorPos.x, -cursorPos.y, cursorPos.z);
+    glEnd();
+    glEnable(GL_LIGHTING);
+    */
+    
+    glPushMatrix(); // Prepare Dynamic transform
         glMultMatrixf(transform.n);
+        //glMultMatrixf(curQuat.getMatrix().n);
+        
         if(drawAxis) myPlanet.renderAxis();
         if(drawWireframe) myPlanet.renderCells();
         if(drawPlanet){
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
             myPlanet.renderEarth();
         }
-        drawBoundingBox();
-    glPopMatrix(); // NEW: Unapply Dynamic transform
+        if(drawCell){
+            cursorCellId = myPlanet.getCellIdAt(cursorRadial);
+            if(siloSelected) glColor3f(0.0,1.0,0.0);
+            else if(targetSelected) glColor3f(1.0,0.0,0.0);
+            glDisable(GL_LIGHTING);
+            glLineWidth( 3.0f );
+            myPlanet.renderCellBoundary(myPlanet.cells[cursorCellId]);
+            glLineWidth( 1.0f );
+            glEnable(GL_LIGHTING);
+        }
+        if(drawBoundingBox) renderBoundingBox();
+        if(drawSkybox) renderSkybox();
+    glPopMatrix(); // Unapply Dynamic transform
     
-    glFlush (); // Flush The GL Rendering Pipeline
+    glFlush(); // Flush The GL Rendering Pipeline
 }
 
 void display(){
@@ -190,36 +289,31 @@ void resize(int w, int h){
     gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    myArcBall.setBounds((GLfloat)w, (GLfloat)h);
 }
 
 void handleKeyPress(unsigned char key, int x, int y){
     switch (key) {
         case '[': 
-            if(k>0) 
-                k--; 
+            if(k > 0) k--; 
             myPlanet.complexity = k; 
             myPlanet.init(); 
-            cout << "k = " << k << endl; 
             break;
         case ']': 
-            if(k<7) 
-                k++; 
+            if(k < 7) k++; 
             myPlanet.complexity = k; 
             myPlanet.init();
-            cout << "k = " << k << endl; 
             break;
         case 'w':
-            rotX += 0.05;
+            rotateScene_vrot(-1.0f * PIOVER180);
             break;
         case 's':
-            rotX -= 0.05;
+            rotateScene_vrot(1.0f * PIOVER180);
             break;
-        case 'a'://GLUT_KEY_LEFT:
-            rotY += 0.05;
+        case 'd':
+            rotateScene_hrot(-1.0f * PIOVER180);
             break;
-        case 'd'://GLUT_KEY_RIGHT:
-            rotY -= 0.05;
+        case 'a':
+            rotateScene_hrot(1.0f * PIOVER180);
             break;
         case 'f':
             if(drawWireframe) drawWireframe = false;
@@ -232,6 +326,16 @@ void handleKeyPress(unsigned char key, int x, int y){
         case 'h':
             if(drawAxis) drawAxis = false;
             else drawAxis = true;
+            break;
+        case ' ': //#define SPACEBAR 32
+            curQuat.clear();
+            lastQuat.clear();
+            break;
+        case ',':
+            zoom -= 0.1;
+            break;
+        case '.':
+            zoom += 0.1;
             break;
         case 27: //Escape key
             exit(0);
@@ -255,6 +359,7 @@ Vec3 getGLPos(int x, int y){
     glReadPixels( x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
     
     /*
+    // This code is less flexible
     viewport[1] = 0;
     viewport[0] = 0;
 
@@ -270,6 +375,7 @@ Vec3 getGLPos(int x, int y){
     
     rayDir = rayDir - rayP;
     rayDir.normalize();
+    cursorDir = rayDir;
     
     return rayP;
     */
@@ -277,60 +383,30 @@ Vec3 getGLPos(int x, int y){
     return Vec3(posX, posY, posZ);
     
 }
-/*
-// Returns a point on the planet's surface given a ray
-bool rayHitPlanet( Vec3 p, Vec3 dir, Vec3 &result ){
-    float a,b,c,d;
-    a = dir * dir;
-    b = (2.0f*dir) * p;
-    c = p*p - (kPlanetRadius*kPlanetRadius);
-    d = b*b - 4.0f*a*c;
-    if (d <=0 ) return false;
-    result = p + ((-b - sqrt(d)) / 2.0f*a)*dir;
-    return true;
+
+void getGLPosDir(int x, int y, Vec3& rayPos, Vec3& rayDir){
+    GLint viewport[4];
+    GLdouble modelview[16];
+    GLdouble projection[16];
+    GLfloat winX, winY, winZ;
+    GLdouble posX, posY, posZ;
+ 
+    glGetDoublev( GL_MODELVIEW_MATRIX, modelview );
+    glGetDoublev( GL_PROJECTION_MATRIX, projection );
+    glGetIntegerv( GL_VIEWPORT, viewport );
+ 
+    winX = (float)x;
+    winY = (float)viewport[3] - (float)y;
+    
+    gluUnProject( winX, winY, 0.0, modelview, projection, viewport, &posX, &posY, &posZ );
+    rayPos = Vec3(posX, posY, posZ);
+    
+    gluUnProject( winX, winY, 1.0, modelview, projection, viewport, &posX, &posY, &posZ );
+    rayDir = Vec3(posX, posY, posZ);
+    rayDir = rayDir - rayPos;
+    rayDir.normalize();
 }
 
-PlanetCell& selectCell(){
-    // Make a ray from the mouse position
-    Vec3 rayP, rayDir;
-
-    // unproject at 2 depths
-    GLdouble x, y, z;    
-
-    // adjust the viewport for unProject to work    
-    m_viewport[1] = 0;
-    m_viewport[0] = 0;
-
-    gluUnProject( m_mouseX, m_viewport[3]-m_mouseY, 0.001,
-                  m_modelView, m_projection, m_viewport,
-                  &x, &y, &z );
-    rayP = Vec3( x, y, z );
-    
-    gluUnProject( m_mouseX, m_viewport[3]-m_mouseY, 0.01,
-                  m_modelView, m_projection, m_viewport,
-                  &x, &y, &z );
-    rayDir = Vec3( x, y, z );
-    
-    // subtract them to get the ray
-    rayDir = rayDir - rayP;
-    rayDir = rayDir.normalize();
-
-    Vec3 p;
-    if (m_planet->rayHitPlanet( rayP, rayDir, p )){
-        m_mouseSurfacePos = p;
-        m_mouseOnSurface = true;
-    }
-    else{        
-        m_mouseOnSurface = false;
-    }            
-
-    // Now, find the hex which contains the cursor
-    if (m_mouseOnSurface)
-    {
-        m_cursorHex = m_planet->getHexIndexFromPoint( m_mouseSurfacePos );
-    }
-}
-*/
 void motionUpdate(){ // Perform Motion Updates Here
     if (middleButtonDown){ // If Right Mouse Clicked, Reset All Rotations
         lastRot.setIdentity(); // Reset Rotation
@@ -339,14 +415,14 @@ void motionUpdate(){ // Perform Motion Updates Here
     }
 
     if (!isDragging){ // Not Dragging
-        if (leftButtonDown){ // First Click
+        if (rightButtonDown){ // First Click
             isDragging = true; // Prepare For Dragging
             lastRot = curRot; // Set Last Static Rotation To Last Dynamic One
             myArcBall.click(MousePt); // Update Start Vector And Prepare For Dragging
         }
     }
     else{
-        if (leftButtonDown){ // Still Clicked, So Still Dragging
+        if (rightButtonDown){ // Still Clicked, So Still Dragging
             Quat curQuat;
             myArcBall.drag(MousePt, curQuat); // Update End Vector And Get Rotation As Quaternion
             //cout << "curQuat = (" << curQuat.x << "," << curQuat.y << "," << curQuat.z << "," << curQuat.w << ")" << endl;
@@ -360,21 +436,45 @@ void motionUpdate(){ // Perform Motion Updates Here
 }
 
 void mouseButton(int button, int state, int x, int y){
-    //y = window_height - y;
-    int myY = window_height - y;
+    MousePt.x = x;
+    MousePt.y = y;
+    y = window_height - y;
     
     if(button == GLUT_LEFT_BUTTON){ // orbitCam
         if(state == GLUT_UP){
+            //glRenderMode( GL_RENDER );
             leftButtonDown = false; 
             xi = -1;
             yi = -1;
         }
         else{
+            //glRenderMode( GL_SELECT );
             leftButtonDown = true; 
             xi = x;
             yi = y;
-            MousePt.x = x;
-            MousePt.y = y;
+            //cursorPos = getGLPos(x, y);
+            getGLPosDir(x, y, cursorPos, cursorDir);
+            //cursorDir.x = cursorDir.x;
+            //cursorDir.y = cursorDir.y;
+            if(myPlanet.rayHitPlanet(cursorPos, cursorDir, cursorRadial)){
+                cursorRadial.y = -cursorRadial.y;
+                cursorRadial = curRot*cursorRadial;
+                drawCell = true;
+                if(selectionCounter == 0){
+                    selectionCounter = 1;
+                    siloSelected = true;
+                    targetSelected = false;
+                }
+                else if(selectionCounter = 1){
+                    selectionCounter = 0;
+                    siloSelected = false;
+                    targetSelected = true;
+                }
+            }
+            else{
+                //drawCell = false;
+            }
+            
         }
     }
     if(button == GLUT_MIDDLE_BUTTON){ // panObj
@@ -397,26 +497,8 @@ void mouseButton(int button, int state, int x, int y){
         } 
         else{
             rightButtonDown = true;
-            //xi = x;
-            //yi = y;
             xi = x;
-            yi = myY;
-            
-            /*
-            glPushMatrix();
-            Vec3 dotCenter = getGLPos(x, myY);
-            dotCenter[2] = zoom;
-            glTranslatef(dotCenter[0], dotCenter[1], dotCenter[2]);
-            glColor3f(1.0, 0.0, 0.0);
-            glutSolidSphere(0.1, 10, 10);
-            //glPointSize(3.0);
-            //glEnable(GL_POINT_SMOOTH);
-            //glBegin(GL_POINTS);
-            //glVertex3f(newX, newY, -zoom+1.0);
-            cout << "dotcenter = (" << dotCenter[0] << "," << dotCenter[1] << "," << dotCenter[2] << ")" << endl;
-            glEnd();
-            glPopMatrix();
-            */
+            yi = y;
         }
     }
     
@@ -424,53 +506,39 @@ void mouseButton(int button, int state, int x, int y){
 }
 
 void mouseMotion(int x, int y){
-    //y = window_height - y;
-    int myY = window_height - y;
+    MousePt.x = x;
+    MousePt.y = y;
+    y = window_height - y;
     
     if(leftButtonDown){
         float deltaX = x - xi;
         float deltaY = y - yi;
-        rotY += (deltaX * 0.1);
-        rotX += (deltaY * 0.1);
         xi = x;
         yi = y;
-        MousePt.x = x;
-        MousePt.y = y;
-        //cout << "MousePT = (" << x << "," << y << ")" << endl; 
-        /*
-        cout << "transform = |" << transform.m00 << "\t" << transform.m10 << "\t" <<transform.m20 << "\t" <<transform.m30 << "\t|" << endl
-             << "            |" << transform.m01 << "\t" << transform.m11 << "\t" <<transform.m21 << "\t" <<transform.m31 << "\t|" << endl
-             << "            |" << transform.m02 << "\t" << transform.m12 << "\t" <<transform.m22 << "\t" <<transform.m32 << "\t|" << endl
-             << "            |" << transform.m03 << "\t" << transform.m13 << "\t" <<transform.m23 << "\t" <<transform.m33 << "\t|" << endl;
-        */
-        /*
-        cout << "curRot = |" << curRot.m00 << "\t" << curRot.m10 << "\t" <<curRot.m20 <<"\t|" << endl
-             << "         |" << curRot.m01 << "\t" << curRot.m11 << "\t" <<curRot.m21 <<"\t|" << endl
-             << "         |" << curRot.m02 << "\t" << curRot.m12 << "\t" <<curRot.m22 <<"\t|" << endl;
-        */
+        //cursorPos = getGLPos(x, y);
+        getGLPosDir(x, y, cursorPos, cursorDir);
+        //cursorDir.x = cursorDir.x;
+        //cursorDir.y = cursorDir.y;
+        //cout << "cursorPos = (" << cursorPos.x << "," << cursorPos.y << "," << cursorPos.z << ")" << endl;
     }
     
     if(middleButtonDown){
         float deltaX = x - xi;
         float deltaY = y - yi;
-        shiftX += (deltaX * 0.1);
-        shiftY += (deltaY * 0.1);
         xi = x;
         yi = y;
     }
     
     if(rightButtonDown){
-        /*
+        float deltaX = x - xi;
         float deltaY = y - yi;
-        zoom += (deltaY * 0.1);
+        //zoom += (deltaY * 0.1);
+        xi = x;
         yi = y;
-        */
-        float deltaY = myY - yi;
-        zoom += (deltaY * 0.1);
-        yi = myY;
-        float newX = ((float)x * 2.0 / window_width) - 1.0;
-        float newY = ((float)myY * 2.0 / window_height) - 1.0;
-        cout << "newXY = (" << newX << "," << newY << ")" << endl;
+        
+        //float newX = ((float)x * 2.0 / window_width) - 1.0;
+        //float newY = ((float)y * 2.0 / window_height) - 1.0;
+        //cout << "newXY = (" << newX << "," << newY << ")" << endl;
         //cout << "zoom = " << zoom << endl;
     }
     

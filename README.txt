@@ -1,3 +1,8 @@
-Trackball (controlled by arrow keys)
+Trackball
 Cell selection (mouse)
-Arbitrary target selection (mouse)
+
+TODO:
+
+Generate paramVerts AFTER selection.
+
+Selection algorithm is flawed.

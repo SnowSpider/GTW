@@ -40,7 +40,7 @@ void Planet::init(){
     // Load texture images
     Image* image;
     
-    image = loadBMP("data/texture/earth/earth_day.bmp");
+    image = loadBMP("data/texture/earth/earth_night.bmp");
     texId_day = loadTexture(image);
     
     image = loadBMP("data/texture/earth/earth_night.bmp");
@@ -118,7 +118,7 @@ void Planet::init(){
     // The order is important in the next two function calls. 
     // If you call fixSeam() first, you will see rifts in the polar regions,
     // because fixSeam adds some vertices to the vertex list.
-    mapTerrain("data/texture/earth/earth_terrain.bmp", 0.1);
+    //mapTerrain("data/texture/earth/earth_terrain.bmp", 0.1);
 
     // Fix the seam.
     fixSeam();
@@ -130,6 +130,7 @@ void Planet::init(){
     cout << "number of vertex = " << vertices.size() << endl;
     cout << "number of face = " << faces.size() << endl;
     cout << "number of cell = " << cells.size() << endl;
+    cout << "k = " << complexity << endl;
 }
 
 void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int k){
@@ -275,7 +276,7 @@ void Planet::fixSeam(){
     }
 }
 
-void Planet::mapTerrain(const char* filename, float unitHeight){
+void Planet::mapTerrain(const char* filename, float unitHeight){ //need repair: changes accumulate on old vertices. That's causing the poles to protrude.
     Image* image = loadBMP(filename);
     for(int i=0;i<vertices.size();i++){
         PlanetVertex& temp = vertices[i];
@@ -284,7 +285,7 @@ void Planet::mapTerrain(const char* filename, float unitHeight){
         unsigned char color = (unsigned char)image->pixels[3 * (y * image->width + x)];
         float h = unitHeight * ((color / 255.0f) - 0.5f);
         temp.altitude = h;
-        Vec3 unitRadial = temp - center;
+        Vec3 unitRadial = temp - center; //fix this line
         unitRadial.normalize();
         Vec3 newRadial = center + (unitRadial * (radius + h));
         temp[0] = newRadial[0];
@@ -318,6 +319,7 @@ void Planet::drawFace(PlanetFace& f){
     Vec3 triCenter = (a + b + c)/ 3.0f; // face center
     Vec3 triNormal = triCenter - center; // face normal
     
+    //glLoadName(f.id);
     glBegin(GL_TRIANGLES);
         glNormal3d(triNormal[0], triNormal[1], triNormal[2]); //Normal for lighting
         glTexCoord2f(c.longitude, c.latitude);
@@ -330,6 +332,7 @@ void Planet::drawFace(PlanetFace& f){
 }
 
 void Planet::renderEarth(){
+    //glInitNames();
     //cout << "Rendering...";
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texId_day);
@@ -451,14 +454,11 @@ void Planet::genCells(){
 }
 
 void Planet::renderCellBoundary(PlanetCell& c){
-    glColor3f(0.0,1.0,0.0);
     vector<size_t> p = c.paramVerts;
     Vec3 triCenter = vertices[c.centerId];
     Vec3 triNormal = triCenter - center;
-    
-    for(int j=0;j<p.size();j++){            
+    for(int j=0;j<p.size();j++){
         glBegin(GL_LINES);
-        glLineWidth( 3.0f );
         glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
         glVertex3d(vertices[p[j]][0], vertices[p[j]][1], vertices[p[j]][2]);
         if(j+1==p.size()){
@@ -539,6 +539,21 @@ PlanetCell& Planet::getCellAt( Vec3 p ){
     return cells[bestCell];
 }
 
+size_t Planet::getCellIdAt( Vec3 p ){
+    Vec3 targetRadial = p - center;
+    float minAngle = 2 * PI;
+    float currentAngle;
+    int bestCell;
+    for(int i=0;i<cells.size();i++){
+        currentAngle = targetRadial.angle(vertices[cells[i].centerId]);
+        if(currentAngle < minAngle){
+            minAngle = currentAngle;
+            bestCell = i;
+        }
+    }
+    return bestCell;
+}
+
 void Planet::renderAxis(){
     glDisable(GL_LIGHTING);
     glBegin(GL_LINES);
@@ -560,7 +575,21 @@ void Planet::renderAxis(){
 }
 
 void Planet::renderCells(){
+    glColor3f(1.0,1.0,1.0);
     for(int i=0;i<cells.size();i++){
         renderCellBoundary(cells[i]);
     }
 }
+
+bool Planet::rayHitPlanet( Vec3 p, Vec3 dir, Vec3 &result ){
+    float a,b,c,d;
+    a = dir.dot(dir);
+    b = (2.0f*dir).dot(p);
+    c = p.dot(p) - (radius*radius);
+    d = b*b - 4.0f*a*c;
+    if (d <=0 ) return false;
+    result = p + ((-b - sqrt(d)) / 2.0f*a)*dir;
+    return true;
+}
+
+

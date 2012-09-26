@@ -105,7 +105,7 @@ Vec3 Quat::operator* (const Vec3 &vec) const {
     resQuat = vecQuat * getConjugate();
     resQuat = *this * resQuat;
  
-    return (Vec3(resQuat.x, resQuat.y, resQuat.z));
+    return Vec3(resQuat.x, resQuat.y, resQuat.z);
 }
 
 Quat& Quat::operator* (const float m){

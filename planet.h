@@ -264,22 +264,22 @@ class VertexList{
     }
     
     PlanetVertex& operator []( int i ){ 
-	    return _vertices[i];
-	}
-	
-	PlanetVertex operator []( int i ) const { 
-	    return _vertices[i]; 
-	}
-	
-	int size(){
-	    return _vertices.size();
-	}
-	
-	void clear(){
-	    _vertices.clear();
-	    currentId = 0;
-	}
-	
+        return _vertices[i];
+    }
+    
+    PlanetVertex operator []( int i ) const { 
+        return _vertices[i]; 
+    }
+    
+    int size(){
+        return _vertices.size();
+    }
+    
+    void clear(){
+        _vertices.clear();
+        currentId = 0;
+    }
+    
 };
 
 class FaceList{
@@ -297,21 +297,21 @@ class FaceList{
     }
     
     PlanetFace& operator []( int i ){ 
-	    return _faces[i];
-	}
-	
-	PlanetFace operator []( int i ) const { 
-	    return _faces[i]; 
-	}
-	
-	int size(){
-	    return _faces.size();
-	}
-	
-	void clear(){
-	    _faces.clear();
-	    currentId = 0;
-	}
+        return _faces[i];
+    }
+    
+    PlanetFace operator []( int i ) const { 
+        return _faces[i]; 
+    }
+    
+    int size(){
+        return _faces.size();
+    }
+    
+    void clear(){
+        _faces.clear();
+        currentId = 0;
+    }
 };
 
 class CellList{
@@ -329,21 +329,21 @@ class CellList{
     }
     
     PlanetCell& operator []( int i ){ 
-	    return _cells[i];
-	}
-	
-	PlanetCell operator []( int i ) const { 
-	    return _cells[i]; 
-	}
-	
-	int size(){
-	    return _cells.size();
-	}
-	
-	void clear(){
-	    _cells.clear();
-	    currentId = 0;
-	}
+        return _cells[i];
+    }
+    
+    PlanetCell operator []( int i ) const { 
+        return _cells[i]; 
+    }
+    
+    int size(){
+        return _cells.size();
+    }
+    
+    void clear(){
+        _cells.clear();
+        currentId = 0;
+    }
 };
 
 class Planet {
@@ -388,8 +388,11 @@ class Planet {
     void renderCellBoundary(PlanetCell& c);
     PlanetCell& getCellAt(float longitude, float latitude);
     PlanetCell& getCellAt( Vec3 surfPos );
+    size_t getCellIdAt( Vec3 p );
     void renderAxis();
     void renderCells();
+    bool rayHitPlanet( Vec3 p, Vec3 dir, Vec3 &result );
+    
 };
 
 #endif
