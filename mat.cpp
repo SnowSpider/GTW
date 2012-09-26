@@ -59,26 +59,42 @@ Mat4::Mat4(float matrix[16]){
     memcpy((void*)mat, (void*)matrix, sizeof(float) * 16);
 }
 
+/*
+A 4x4 matrix
+
+        | 0   4   8  12 |
+  mat = | 1   5   9  13 |
+        | 2   6  10  14 |
+        | 3   7  11  15 |
+*/
+
 Mat4::Mat4(float a, float e, float i, float m,
            float b, float f, float j, float n,
            float c, float g, float k, float o,
            float d, float h, float l, float p){
-    mat[0] = a;
-    mat[1] = e;
-    mat[2] = i;
-    mat[3] = m;
-    mat[4] = b;
-    mat[5] = f;
-    mat[6] = j;
-    mat[7] = n;
-    mat[8] = c;
-    mat[9] = g;
-    mat[10] = k;
-    mat[11] = o;
-    mat[12] = d;
-    mat[13] = h;
-    mat[14] = l;
-    mat[15] = p;
+    mat[0] = a; //mat[0][0]
+    mat[1] = b; //mat[0][1]
+    mat[2] = c; //mat[0][2]
+    mat[3] = d; //mat[0][3]
+    mat[4] = e; //mat[1][0]
+    mat[5] = f; //mat[1][1]
+    mat[6] = g; //mat[1][2]
+    mat[7] = h; //mat[1][3]
+    mat[8] = i; //mat[2][0]
+    mat[9] = j; //mat[2][1]
+    mat[10] = k; //mat[2][2]
+    mat[11] = l; //mat[2][3]
+    mat[12] = m; //mat[3][0]
+    mat[13] = n; //mat[3][1]
+    mat[14] = o; //mat[3][2]
+    mat[15] = p; //mat[3][3]
+}
+
+float& Mat4::operator []( int i ){
+    return mat[i];
+}
+float Mat4::operator []( int i ) const {
+    return mat[i];
 }
 
 //Basic transformations

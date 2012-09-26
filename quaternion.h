@@ -13,18 +13,19 @@ class Quaternion{
     };
     Quaternion();
     Quaternion( const float x, const float y, const float z, const float w );
-    Quaternion( const Quaternion &v );
-    bool operator==(const Quaternion&v) const ;
+    Quaternion( const Quaternion& v );
+    
+    bool operator==(const Quaternion& v) const ;
     float& operator[](const int v);
-    void normalise();
+    void normalize();
     Quaternion getConjugate() const; 
-    Quaternion operator* (const Quaternion &rq) const;
-    Vec3 operator* (const Vec3 &vec) const;
-    void FromAxis (const Vec3 &v, float angle);
+    Quaternion operator* (const Quaternion& rq) const;
+    Vec3 operator* (const Vec3& vec) const;
+    void FromAxis (const Vec3& v, float angle);
     void FromEuler (float pitch, float yaw, float roll);
+    void fromMatrix( const Mat4& m );
     Mat4 getMatrix () const;
-    void getAxisAngle (Vec3 *axis, float *angle);
+    void getAxisAngle (Vec3* axis, float* angle);
 };
-
 
 #endif

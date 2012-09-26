@@ -1,10 +1,14 @@
 #ifndef __Vec3_H__
 #define __Vec3_H__
 
+#include <iostream>
+
 class Vec3{
     public:
-    float x, y, z;
-    //float n[3];
+    union {
+        float n[3];
+        struct{ float x,y,z; };
+    };
     
     Vec3();
 	Vec3( const float a, const float b, const float c );
@@ -40,27 +44,12 @@ class Vec3{
 	void rotateX(float t);
 	void rotateY(float t);
 	void rotateZ(float t);
-	
 };
 
 Vec3 operator*(const float& s, const Vec3& v);
-
-/*
-Vec3 operator*(const float& s, const Vec3& v) {
-    return v * s; 
-}
-
-ostream & operator<<(ostream & out, const Vec3& v) {
-	out << "("; 
-	for(int i=0;i<3;i++)
-	{	
-		out << v[i];
-		if(i<3-1) out << ",";
-	}
-	out << ")";
-	return out;
-}
-*/
+Vec3 midpoint (Vec3& a, Vec3& b);
+Vec3 midpoint (Vec3& a, Vec3& b, Vec3& c);
+std::ostream &operator<<(std::ostream &output, const Vec3 &v);
 
 class Vec4 {
     public:

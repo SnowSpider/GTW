@@ -1,5 +1,4 @@
-#include <cmath>
-#include <iostream>
+#include <math.h>
 #include "vec.h"
 #include "mat.h"
 
@@ -27,19 +26,11 @@ Vec3& Vec3::operator=( const Vec3& v ){
 }
 
 float& Vec3::operator []( int i ){ 
-    if(i==0) return x;
-    else if(i==1) return y;
-    else if(i==2) return z;
-    else return x;
-    //return n[i];
+    return n[i];
 }
     
 float Vec3::operator []( int i ) const { 
-    if(i==0) return x;
-    else if(i==1) return y;
-    else if(i==2) return z;
-    else return x;
-    //return n[i]; 
+    return n[i];
 }
     
 bool Vec3::equals(const Vec3& v) {
@@ -240,6 +231,21 @@ void Vec3::rotateZ(float t){
 
 Vec3 operator*(const float& s, const Vec3& v) {
     return v * s; 
+}
+
+Vec3 midpoint (Vec3& a, Vec3& b){
+    Vec3 midpoint = (a + b) * 0.5;
+    return midpoint;
+}
+
+Vec3 midpoint (Vec3& a, Vec3& b, Vec3& c){
+    Vec3 midpoint = (a + b + c)/3.0;
+    return midpoint;
+}
+
+ostream &operator<<(ostream &output, const Vec3 &v) {
+	cout << '(' << v[0] << ", " << v[1] << ", " << v[2] << ')';
+	return output;
 }
 
 Vec4::Vec4(float a, float b, float c, float d){

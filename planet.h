@@ -5,37 +5,20 @@
 #include <vector>
 #include "vec.h"
 
-using namespace std;
-
-// Note: The planet spins around the Y axis.
-// The equator lies on the xz plane.
-// Post a question on the OpenGL Forum.
-
-//2PI = 6.283185307179586232
-/*
-V = 10k^2 + 2
-F = 20k^2
-E = 30k^2
-where:
-V = number of vertices
-F = number of faces
-E = number of edges
-k = frequency of subdivision
-*/
-
 #define PI 3.1415926535897932384626433832795
+
+using namespace std;
 
 class PlanetVertex: public Vec3{
     public:
-    unsigned int id;
+    size_t id;
     float altitude;
     float longitude;
     float latitude;
-    vector<unsigned int> neighbors;
+    vector<size_t> neighbors;
     bool positive;
     
     PlanetVertex(){
-        id = -1;
         altitude = 0;
         longitude = 0;
         latitude = 0;
@@ -43,7 +26,6 @@ class PlanetVertex: public Vec3{
     }
     
     PlanetVertex( const float a, const float b, const float c ){
-        id = -1;
         x = a;
         y = b;
         z = c;
@@ -54,7 +36,6 @@ class PlanetVertex: public Vec3{
     }
     
     PlanetVertex( const Vec3& v ){
-        id = -1;
         x = v.x; 
         y = v.y; 
         z = v.z;
@@ -77,7 +58,6 @@ class PlanetVertex: public Vec3{
     }
     
     PlanetVertex( Vec3& v ){
-        id = -1;
         x = v.x; 
         y = v.y; 
         z = v.z;
@@ -147,7 +127,7 @@ class PlanetVertex: public Vec3{
 
 class PlanetFace{
     public:
-    unsigned int id;
+    size_t id;
     int v[3];
     Vec3 center;
     Vec3 normal;
@@ -163,17 +143,6 @@ class PlanetFace{
         float angle = 0;
         positive = true;
     }
-    
-    /*
-    PlanetFace(int a, int b, int c){
-        v[0] = a;
-        v[1] = b;
-        v[2] = c;
-        center = (vertices[a] + vertices[b] + vertices[c])/3.0;
-        normal = (vertices[b]-vertices[a])^(vertices[c]-vertices[a]);
-        angle = center.angle(normal);
-    }
-    */
     
     PlanetFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
         v[0] = a.id;
@@ -214,11 +183,11 @@ class PlanetFace{
 
 class PlanetCell{
     public: 
-    unsigned int id; 
-    unsigned int centerId;
-    unsigned int owner; //id of the player who owns the territory
-    vector<unsigned int> neighbors; //same as the center vertex neighbors
-    vector<unsigned int> paramVerts; //parameter vertices
+    size_t id; 
+    size_t centerId;
+    size_t owner; //id of the player who owns the territory
+    vector<size_t> neighbors; //same as the center vertex neighbors
+    vector<size_t> paramVerts; //parameter vertices
     float altitude;
     float longitude;
     float latitude;
@@ -275,7 +244,7 @@ class PlanetCell{
         latitude = c.latitude;
     }
     
-    void setOwner(unsigned int him){
+    void setOwner(size_t him){
         owner = him;
     }
 };
@@ -283,7 +252,7 @@ class PlanetCell{
 class VertexList{
     public:
     vector<PlanetVertex> _vertices;
-    unsigned int currentId;
+    size_t currentId;
     
     VertexList(){
         currentId = 0;
@@ -316,7 +285,7 @@ class VertexList{
 class FaceList{
     public:
     vector<PlanetFace> _faces;
-    unsigned int currentId;
+    size_t currentId;
     
     FaceList(){
         currentId = 0;
@@ -348,7 +317,7 @@ class FaceList{
 class CellList{
     public:
     vector<PlanetCell> _cells;
-    unsigned int currentId;
+    size_t currentId;
     
     CellList(){
         currentId = 0;
@@ -377,175 +346,49 @@ class CellList{
 	}
 };
 
-class Projectile{
+class Planet {
     public:
-    unsigned int id;
-    string name;
-    bool guided;
-    float blastRadius;
-    
-    
-};
-
-class Weapon{
-    public:
-    unsigned int id;
-    string name;
-    int range;
-    int reloadTime; //in miliseconds
-    int damage;
-    
-};
-
-class Species{
-    public: 
-    unsigned int id;
-    bool mobile;
-    
-    string name;
-    string designation;
-    string description;
-    //Weapon weapon;
-    
-    int weaponId;
-    int shockArmor;
-    int pierceArmor;
-    int cutArmor;
-    int thermalArmor;
-    int chemicalArmor;
-    int radiationArmor;
-    
-    float sightDistance;
-    float radarDistance;
-    int cost;
-    int population;
-    int time; //in miliseconds
-    float maxLife;
-    float maxStamina;
-    float maxFuel;
-    float maxVelocity;
-    float brakeRate;
-    float acceleration;
-    float turnRate;
-    float minWaterDepth;
-    float maxWaterDepth;
-    float serviceCeiling;
-    
-    //3d model
-    //idle animation
-    //move animation
-    //attack animation
-    //death animation
-    //chear animation
-    //items
-    //aura
-    //trample damage
-    
-};
-
-class Piece{
-    public: 
-    unsigned int id;
-    unsigned int owner;
-    unsigned int speciesId;
-    float longitude;
-    float latitude;
-    float altitude;
-    
-    float range;
-    int reloadTime; //in miliseconds
-    int damage;
-    int shockArmor;
-    int pierceArmor;
-    int cutArmor;
-    int thermalArmor;
-    int chemicalArmor;
-    int radiationArmor;
-    
-    float sightDistance;
-    float radarDistance;
-    
-    float life;
-    float stamina;
-    int experience;
-    
-    bool mobile;
-    bool alive;
-    
-    Piece(){
-        
-    }
-    
-    Piece( const Piece& p ){
-        
-    }
-    
-    Piece& operator=( const Piece& p ){
-        
-        return *this;
-    }
-    
-    void teleport(float x, float y){
-        longitude = x;
-        latitude = y;
-    }
-    
-};
-
-class Planet{
-    public:
-    int k; // frequency of subdivision
-    int numVert; // number of vertex
-    int numFace; // number of faces
-    int numCell; // number of cells
-
     VertexList vertices;
-    //VertexList rogueVertices; //not used
     FaceList faces;
     CellList cells;
     
-    vector<int> owners;
-    
     Vec3 center;
-    Vec3 axis; // axis vector
-    Vec3 longZero; //longitude zero
+    Vec3 axis; 
+    Vec3 longitude_zero; 
     float radius;
-    float spinAngle;
-    bool overlayWireframe;
-    GLuint _textureId;
+    int complexity;
     
-    Planet(Vec3 _center, Vec3 _axis, Vec3 _longZero, float _radius, int _k){
-        center = _center;
-        axis = _axis;
-        radius = _radius;
-        k = _k;
-        longZero = _longZero;
-        overlayWireframe = false;
+    float spinAngle;
+    GLuint texId_day;
+    GLuint texId_night;
+    GLuint texId_pop;
+    GLuint texId_terrain;
+    GLuint texId_spec;
+    
+    Planet(Vec3 c, Vec3 a, Vec3 lz, float r, int k){
+        center = c;
+        axis = a;
+        longitude_zero = lz;
+        radius = r;
+        complexity = k;
     }
     
     void init();
     void subdivide (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k);
     void mapVertex(PlanetVertex& v);
-    void mapFace (PlanetFace& f);
-    void mapFaces();
+    void fixSeamHelper (PlanetFace& f);
+    void fixSeam();
     void mapTerrain(const char* filename, float unitHeight);
-    void drawFace (PlanetFace& f);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
-    PlanetVertex midpoint (PlanetVertex& a, PlanetVertex& b);
-    PlanetVertex midpoint (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
-    void render();
+    void drawFace (PlanetFace& f);
+    void renderEarth();
     void renderWireframe();
-    void generateCells();
-    void renderCell(PlanetCell& c);
-    void renderCells();
-    void renderSelectionCells();
-    void generateBorder();
-    PlanetCell& findCell(float longitude, float latitude);
-    void highlightCell(PlanetCell& target);
-    void place(Piece& p, float x, float y);
-    bool rayHitPlanet( Vec3 p, Vec3 dir, Vec3& result );
-    PlanetCell& getCellFromPoint( Vec3 surfPos );
+    void genCells();
+    void renderCellBoundary(PlanetCell& c);
+    PlanetCell& getCellAt(float longitude, float latitude);
+    PlanetCell& getCellAt( Vec3 surfPos );
+    void renderAxis();
 };
 
 #endif

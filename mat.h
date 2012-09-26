@@ -41,6 +41,9 @@ class Mat4
              float b, float f, float j, float n,
              float c, float g, float k, float o,
              float d, float h, float l, float p);
+        
+        float& operator []( int i );
+	    float operator []( int i ) const;
 
         //Basic transformations
         static Mat4 CreateIdentity();

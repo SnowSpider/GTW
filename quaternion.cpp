@@ -36,7 +36,7 @@ float& Quaternion::operator[](const int v){
 // normalising a quaternion works similar to a vector. This method will not do anything
 // if the quaternion is close enough to being unit-length. define TOLERANCE as something
 // small like 0.00001f to get accurate results
-void Quaternion::normalise()
+void Quaternion::normalize()
 {
 	// Don't normalize if we don't have to
 	float mag2 = w * w + x * x + y * y + z * z;
@@ -123,7 +123,48 @@ void Quaternion::FromEuler(float pitch, float yaw, float roll)
 	this->z = cosr * cosp * siny - sinr * sinp * cosy;
 	this->w = cosr * cosp * cosy + sinr * sinp * siny;
  
-	normalise();
+	normalize();
+}
+
+// Convert from Mat4
+void Quaternion::fromMatrix( const Mat4& m ){ 
+    float tr, s, q[4];
+    int i, j, k;
+    int next[3] = {1, 2, 0};
+    tr = m[0] + m[5] + m[10];
+    // Check the diagonal
+    if(tr > 0.0){
+        s = sqrt(tr + 1.0);
+        w = s / 2.0;
+        s  = 0.5 / s;
+        x = (m[6] - m[9]) * s;
+        y = (m[8] - m[2]) * s;
+        z = (m[1] - m[4]) * s;
+    }
+    else{
+        i = 0;
+        if(m[5] > m[0]){
+            i = 1;
+        }
+        if(m[10] > m[i*4]){
+            i = 2;
+        }
+        j = next[i];
+        k = next[j];
+        s = sqrt((m[i*4] - m[j*4] + m[k*4]) + 1.0);
+        
+        q[i] = s * 0.5;
+        if(s != 0.0){
+            s = 0.5 / s;
+        }
+        q[3] = (m[j*4+k] + m[k*4+j]) * s;
+        q[j] = (m[i*4+j] + m[j*4+i]) * s;
+        q[k] = (m[i*4+k] + m[k*4+i]) * s;
+        x = q[0];
+        y = q[1];
+        z = q[2];
+        w = q[3];
+    }
 }
 
 // Convert to Matrix
@@ -141,7 +182,7 @@ Mat4 Quaternion::getMatrix() const
  
 	// This calculation would be a lot more complicated for non-unit length quaternions
 	// Note: The constructor of Mat4 expects the Matrix in column-major format like expected by
-	//   OpenGL
+	// OpenGL
 	return Mat4( 1.0f - 2.0f * (y2 + z2), 2.0f * (xy - wz), 2.0f * (xz + wy), 0.0f,
 			     2.0f * (xy + wz), 1.0f - 2.0f * (x2 + z2), 2.0f * (yz - wx), 0.0f,
 			     2.0f * (xz - wy), 2.0f * (yz + wx), 1.0f - 2.0f * (x2 + y2), 0.0f,
@@ -157,5 +198,6 @@ void Quaternion::getAxisAngle(Vec3 *axis, float *angle)
 	axis->z = z / scale;
 	*angle = acos(w) * 2.0f;
 }
+
 
 
