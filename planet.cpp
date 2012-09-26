@@ -35,6 +35,7 @@ GLuint loadTexture(Image* image) {
 void Planet::init(){
     vertices.clear();
     faces.clear();
+    cells.clear();
     Image* image = loadBMP("earth.bmp");
     _textureId = loadTexture(image);
     delete image;
@@ -86,32 +87,6 @@ void Planet::init(){
                      << v1[2] << "}" << endl;
     */
     
-    mapVertex(v0);
-    mapVertex(v1);
-    mapVertex(v2);
-    mapVertex(v3);
-    mapVertex(v4);
-    mapVertex(v5);
-    mapVertex(v6);
-    mapVertex(v7);
-    mapVertex(v8);
-    mapVertex(v9);
-    mapVertex(v10);
-    mapVertex(v11);
-    
-    vertices.add(v0);
-    vertices.add(v1);
-    vertices.add(v2);
-    vertices.add(v3);
-    vertices.add(v4);
-    vertices.add(v5);
-    vertices.add(v6);
-    vertices.add(v7);
-    vertices.add(v8);
-    vertices.add(v9);
-    vertices.add(v10);
-    vertices.add(v11);
-    
     subdivide (v0, v1, v2   , k);
     subdivide (v3, v2, v1   , k);
     subdivide (v3, v4, v5   , k);
@@ -150,66 +125,72 @@ void Planet::init(){
                                       << faces[i].v[2] << ")" << endl;
     }
     */
+    
+    mapFaces();
+    
+    /*
     for(int i=0;i<vertices.size();i++){
         //cout << vertices[i].id << endl;
-        //cout << "v" << i << " has " << vertices[i].neighbors.size() << " neighbors." << endl;
+        cout << "v" << i << " has " << vertices[i].neighbors.size() << " neighbors." << endl;
     }
+    */
     
+    generateCells();
+    cout << "number of vertex = " << vertices.size() << endl;
+    cout << "number of face = " << faces.size() << endl;
+    cout << "number of cell = " << cells.size() << endl;
 }
 
 void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k){
     if(_k==0){
         //assign neighbors
-        a.marry(b);
-        b.marry(c);
-        c.marry(a);
+        bool aNew = true;
+        bool bNew = true;
+        bool cNew = true;
+        int aId, bId, cId;
         
-        /*
-        bool aIsUnique = true;
-        bool bIsUnique = true;
-        bool cIsUnique = true;
-        
-        PlanetVertex* tempA = &a;
-        PlanetVertex* tempB = &b;
-        PlanetVertex* tempC = &c;
-        
-        for(int i=0;i<vertices.size();i++){
-            if(vertices[i].equals(a)){
-                tempA = &vertices[i];
-                aIsUnique = false;
-                break;
+        for(int i=0;i<vertices.size();i++){ //This makes init() unbearably slow, but I can't help it.
+            PlanetVertex temp = vertices[i];
+            
+            //if(temp.equals(center)) cout << "FFFFFUUUUUUUU-" << endl;
+            
+            if(temp.equals(a)){
+                aNew = false;
+                aId = temp.id;
             }
-            if(vertices[i].equals(b)){
-                tempB = &vertices[i];
-                bIsUnique = false;
-                break;
+            if(temp.equals(b)){
+                bNew = false;
+                bId = temp.id;
             }
-            if(vertices[i].equals(c)){
-                tempC = &vertices[i];
-                cIsUnique = false;
-                break;
+            if(temp.equals(c)){
+                cNew = false;
+                cId = temp.id;
             }
         }
         
-        if(aIsUnique) vertices.add(*tempA);
-        if(bIsUnique) vertices.add(*tempB); 
-        if(cIsUnique) vertices.add(*tempC);
-        */
+        if(aNew){
+            mapVertex(a);
+            vertices.add(a);
+            aId = vertices.currentId - 1;
+        }
+        if(bNew){
+            mapVertex(b);
+            vertices.add(b);
+            bId = vertices.currentId - 1;
+        }
+        if(cNew){
+            mapVertex(c);
+            vertices.add(c);
+            cId = vertices.currentId - 1;
+        }
         
-        //vertices.add(a);
-        //vertices.add(b); 
-        //vertices.add(c);
+        vertices[aId].marry(vertices[bId]); //Ugly.
+        vertices[bId].marry(vertices[cId]);
+        vertices[cId].marry(vertices[aId]);
         
-        /*
-        a.neighbors.push_back(b.id);
-        a.neighbors.push_back(c.id);
-        b.neighbors.push_back(a.id);
-        b.neighbors.push_back(c.id);
-        c.neighbors.push_back(a.id);
-        c.neighbors.push_back(b.id);
-        */
+        //PlanetFace tempFace(a, b, c);
+        PlanetFace tempFace(vertices[aId], vertices[bId], vertices[cId]);
         
-        PlanetFace tempFace(a, b, c);
         /*
         cout << "tempFace: " << "v" << a.id << "," 
                              << "v" << b.id << ","
@@ -217,6 +198,7 @@ void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k
         */
         faces._faces.push_back(tempFace);
         //nf++;
+        
     }
     else{
         // find edge midpoints
@@ -315,6 +297,7 @@ void Planet::mapFace(PlanetFace& f){
             //cout << "c.latitude = " << cLatitude << endl;
             //cout << "newC.longitude = " << newC.longitude << endl;
             //cout << "newC.latitude = " << newC.latitude << endl;
+            //if(vertices[vertices.currentId-1].positive == false) cout << "aaaaaaa!!!!" << endl;
         }
         if(b[0]<=0){
             //bLongitude++;
@@ -331,6 +314,7 @@ void Planet::mapFace(PlanetFace& f){
             //cout << "b.latitude = " << bLatitude << endl;
             //cout << "newB.longitude = " << newB.longitude << endl;
             //cout << "newB.latitude = " << newB.latitude << endl;
+            //if(vertices[vertices.currentId-1].positive == false) cout << "aaaaaaa!!!!" << endl;
         }
         if(a[0]<=0){
             //aLongitude++;
@@ -347,7 +331,7 @@ void Planet::mapFace(PlanetFace& f){
             //cout << "a.latitude = " << aLatitude << endl;
             //cout << "newA.longitude = " << newA.longitude << endl;
             //cout << "newA.latitude = " << newA.latitude << endl;
-            
+            //if(vertices[vertices.currentId-1].positive == false) cout << "aaaaaaa!!!!" << endl;
         }
         
         f.positive = false;
@@ -386,6 +370,7 @@ void Planet::drawFace(PlanetFace& f){
     Vec3 triCenter = (a + b + c)/ 3.0f; // face center
     Vec3 triNormal = triCenter - center; // face normal
     
+    
     glBegin(GL_TRIANGLES);
         glNormal3d(triNormal[0], triNormal[1], triNormal[2]); //Normal for lighting
         glTexCoord2f(c.longitude, c.latitude);
@@ -396,7 +381,6 @@ void Planet::drawFace(PlanetFace& f){
         glVertex3d(a[0], a[1], a[2]); //Vertex a
     glEnd();
     
-    
 }
 
 PlanetVertex Planet::midpointOnSphere (PlanetVertex& a, PlanetVertex& b){
@@ -404,19 +388,26 @@ PlanetVertex Planet::midpointOnSphere (PlanetVertex& a, PlanetVertex& b){
     Vec3 unitRadial = midpoint - center;
     unitRadial.normalize();
     PlanetVertex midPointOnSphere = center + (unitRadial * radius);
-    mapVertex(midPointOnSphere);
-        
-    for(int i=0;i<vertices.size();i++){
-        if(vertices[i].equals(midPointOnSphere)){
-            return vertices[i];
-        }
-    }
-    
-    //cout << "Moo...";
-    vertices.add(midPointOnSphere);
-    //cout << "I say." << endl;
-    
+    //mapVertex(midPointOnSphere);
     return midPointOnSphere;
+}
+
+PlanetVertex Planet::midpointOnSphere (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
+    Vec3 midpoint = (a + b + c)/3.0;
+    Vec3 unitRadial = midpoint - center;
+    unitRadial.normalize();
+    PlanetVertex midPointOnSphere = center + (unitRadial * radius);
+    return midPointOnSphere;
+}
+
+PlanetVertex Planet::midpoint (PlanetVertex& a, PlanetVertex& b){
+    Vec3 midpoint = (a + b) * 0.5;
+    return midpoint;
+}
+
+PlanetVertex Planet::midpoint (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
+    Vec3 midpoint = (a + b + c)/3.0;
+    return midpoint;
 }
 
 void Planet::render(){
@@ -468,14 +459,135 @@ void Planet::renderWireframe(){
     }
 }
 
-/*
 void Planet::generateCells(){
+    //cout << "step 0" << endl;
     for(int i=0;i<vertices.size();i++){
-        if(vertices[i]){
-            
+        if(vertices[i].neighbors.size()>0){
+            PlanetCell tempCell(vertices[i]);
+            vector<unsigned int> n = tempCell.neighbors;
+            PlanetVertex tempVert;
+            for(int j=0;j<n.size();j++){
+                PlanetVertex currentNeighbor = vertices[n[j]];
+                //cout << "vertices[i] = (" << vertices[i][0] << "," << vertices[i][1] << "," << vertices[i][0] << ")" << endl;
+                //cout << "vertices[n[j]] = (" << vertices[n[j]][0] << "," << vertices[n[j]][1] << "," << vertices[n[j]][0] << ")" << endl;
+                tempVert = midpoint(vertices[i], currentNeighbor);
+                //cout << "tempVert = (" << tempVert[0] << "," << tempVert[1] << "," << tempVert[0] << ")" << endl;
+                vertices.add(tempVert); // NOT shared between cells
+                tempCell.paramVerts.push_back(vertices.currentId - 1);
+            }
+            for(int j=0;j<faces.size();j++){
+                if( vertices[faces[j].v[0]].equals(vertices[i]) || 
+                    vertices[faces[j].v[1]].equals(vertices[i]) || 
+                    vertices[faces[j].v[2]].equals(vertices[i]) ){
+                    tempVert = faces[j].center;
+                    vertices.add(tempVert);
+                    tempCell.paramVerts.push_back(vertices.currentId - 1);
+                }
+            }
+            //sorting the paramVerts
+            vector<unsigned int> x = tempCell.paramVerts;
+            vector<unsigned int> paramVerts_sorted;
+            unsigned int tempId;
+            int index = 0;
+            float min;
+            while(x.size()>0){
+                tempId = x[index];
+                x.erase(x.begin()+index);
+                paramVerts_sorted.push_back(tempId);
+                min = radius; //critical
+                for(int j=0;j<x.size();j++){
+                    float edgeLength = (vertices[tempId] - vertices[x[j]]).length();
+                    if(edgeLength < min){
+                        min = edgeLength;
+                        index = j;
+                    }
+                }
+            }
+            tempCell.paramVerts = paramVerts_sorted;
+            cells.add(tempCell);
+            //cout << "number of paramVerts = " << tempCell.paramVerts.size() << endl;
         }
     }
+    //cout << "generateCells() finished." << endl;
 }
-*/
+
+void Planet::renderCells(){
+    /*
+    glColor3f(0.0,1.0,0.0);
+    for(int i=0;i<faces.size();i++){
+        PlanetFace f = faces[i];
+        PlanetVertex& a = vertices[f.v[0]]; 
+        PlanetVertex& b = vertices[f.v[1]]; 
+        PlanetVertex& c = vertices[f.v[2]]; 
+        Vec3 triCenter = midpoint(a, b, c);
+        Vec3 triNormal = triCenter - center;
+        PlanetVertex p = midpoint(a,b);
+        PlanetVertex q = midpoint(b,c);
+        PlanetVertex r = midpoint(c,a);
+        glBegin(GL_LINES);
+            glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+            glVertex3d(triCenter[0], triCenter[1], triCenter[2]); 
+            glVertex3d(p[0], p[1], p[2]); 
+        glEnd();
+        glBegin(GL_LINES);
+            glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+            glVertex3d(triCenter[0], triCenter[1], triCenter[2]); 
+            glVertex3d(q[0], q[1], q[2]); 
+        glEnd();
+        glBegin(GL_LINES);
+            glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+            glVertex3d(triCenter[0], triCenter[1], triCenter[2]); 
+            glVertex3d(r[0], r[1], r[2]); 
+        glEnd();
+    }
+    */
+    
+    glColor3f(0.0,1.0,0.0);
+    for(int i=0;i<cells.size();i++){
+        PlanetCell tempCell = cells[i];
+        vector<unsigned int> p = tempCell.paramVerts;
+        Vec3 triCenter = vertices[tempCell.centerId];
+        Vec3 triNormal = triCenter - center;
+        
+        for(int j=0;j<p.size();j++){
+            
+            glBegin(GL_LINES);
+            glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+            glVertex3d(vertices[p[j]][0], vertices[p[j]][1], vertices[p[j]][2]);
+            if(j+1==p.size()){
+                glVertex3d(vertices[p[0]][0], vertices[p[0]][1], vertices[p[0]][2]);
+            }
+            else{
+                glVertex3d(vertices[p[j+1]][0], vertices[p[j+1]][1], vertices[p[j+1]][2]);
+            }
+            glEnd();
+            
+            /*
+            Vec3 temp = vertices[p[j]];
+            glBegin(GL_LINES);
+            glVertex3d(center[0], center[1], center[2]);
+            glVertex3d(temp[0], temp[1], temp[2]);
+            glEnd();
+            */
+            /*
+            Vec3 a = vertices[p[j]];
+            for(int l=0;l<p.size();l++){ // need optimization; paramVerts need to be sorted counterclockwise
+                Vec3 b = vertices[p[l]];
+                glBegin(GL_TRIANGLES);
+                    glNormal3d(triNormal[0], triNormal[1], triNormal[2]);
+                    glVertex3d(a[0], a[1], a[2]); 
+                    glVertex3d(b[0], b[1], b[2]);
+                    glVertex3d(triCenter[0], triCenter[1], triCenter[2]); 
+                glEnd();
+            }
+            */
+        }
+        
+        
+        
+    }
+}
+
+
 
 

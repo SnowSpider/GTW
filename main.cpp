@@ -17,6 +17,9 @@
 
 using namespace std;
 
+int window_width = 800, window_height = 600;
+float window_aspect = (float)window_width / (float)window_height;
+
 int kay = 0;
 
 static int k = 0; //The frequency of subdivision
@@ -48,15 +51,32 @@ float xrotrad, yrotrad;
 
 float zoom;
 
-void initGL();
+bool leftButtonDown = false;
+bool middleButtonDown = false;
+bool rightButtonDown = false;
+
+float tx = 0.0f; 
+float ty = 0.0f;
+float xi = 0.0f;
+float yi = 0.0f;
+float theta = 0.0f;
+float phi = 0.0f;
+
+void renderAxis();
+void createPlanet();
 void initScene();
+void initGL();
 void drawSceneGraphics();
 void glutDisplay();
 void glutIdle();
 void camera(void);
 void glutReshape(int width, int height);
 void exitHandler();
-void createPlanet();
+void handleKeypress(unsigned char key, int x, int y);
+void mouseButton(int button, int state, int x, int y);
+void mouseMotion(int x, int y);
+void initRendering();
+void handleResize();
 
 Planet myPlanet(center, axis, longZero, radius, k);
 
@@ -89,16 +109,12 @@ void renderAxis()
 }
 
 void createPlanet(){
-    
     myPlanet.init();
-    myPlanet.mapFaces();
-    //myPlanet.render();
 }
 
 //Initializes the scene.  Handles initializing OpenGL stuff. 
 void initScene() {
     
-    initGL();
     createPlanet();
     
 }
@@ -148,16 +164,17 @@ void drawSceneGraphics() {
     double a = (radius / cRadius) * 0.5;
     double b = (radius / cRadius) / (2.0f * phi);
     
+    
+    
     // Draw the geodesic sphere
     glPushMatrix();
     
     camera();
     
     //glRotatef(30.0, 0, 0, 1); //Makes the planet stand straight
-    glRotatef(180.0, 0, 0, 1);
+//    glRotatef(180.0, 0, 0, 1);
     //glRotatef(180, 0, 1, 0);
-//    glRotatef(-45, 1, 0, 0);
-    glRotatef(0.0,0,1,0);
+//    glRotatef(0.0,0,1,0);
     //glRotatef(xrot, 0, 1, 0);
     
     //glRotatef(spinAngle, b, a, 0.0); //Make sure that the wireframe spins at the same rate
@@ -182,7 +199,8 @@ void drawSceneGraphics() {
     */
     
     if(drawWireframe){
-        myPlanet.renderWireframe();
+        myPlanet.renderCells();
+        //myPlanet.renderWireframe();
     }
     /*
     if(drawWireframe){ // Draw the overlay wireframe
@@ -196,7 +214,7 @@ void drawSceneGraphics() {
     }
     */
     glPopMatrix();
-    
+    glFlush();
 }
 
 //GLUT callback for redrawing the view.
@@ -212,32 +230,42 @@ void glutIdle() {
 }
 
 void camera(void){
+    
     glTranslatef(0,0,-zoom);
     glTranslatef(-xpos, -ypos, -zpos);
-    glRotatef(xrot, 1, 0, 0); //rotate on left/right
-    glRotatef(yrot, 0, 1, 0); //rotate on up/down
+    //glRotatef(yrot, 0, 1, 0); //left/right
+    //glRotatef(xrot, 1, 0, 0); //up/down
+    glRotatef(yrot, 0, 1, 0);
+    glRotatef(xrot, cos(yrot*PI/180.0), 0, sin(yrot*PI/180.0));
     
+    /*
+    glTranslatef(-tx, ty, 0);
+	glTranslatef(0, 0, 10.0*zoom);
+	glRotatef(theta, 0, 1, 0);
+	glRotatef(phi, cos(theta*PI/180.0), 0, sin(theta*PI/180.0));
+	*/
 }
 
 //GLUT callback for reshaping the window.
 void glutReshape(int width, int height) {
     static const double kPI = 3.1415926535897932384626433832795;
     static const double kFovY = 45;
-
+    
     double nearDist, farDist, aspect;
-
+    
     glViewport(0, 0, width, height);
-
+    
     // Compute the viewing parameters based on a fixed fov and viewing
     // a canonical box centered at the origin.
-
+    
     nearDist = 1.0 / tan((kFovY / 2.0) * kPI / 180.0);
     farDist = nearDist + 2.0;
     aspect = (double) width / height;
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(kFovY, aspect, nearDist, farDist);
+    //gluPerspective(kFovY, aspect, nearDist, farDist);
+    gluPerspective(kFovY, aspect, 0.01, 100);
 
     // Place the camera down the Z axis looking at the origin.
     glMatrixMode(GL_MODELVIEW);
@@ -266,36 +294,30 @@ void handleKeypress(unsigned char key, int x, int y) {
                 kay--; 
             myPlanet.k = kay; 
             myPlanet.init(); 
-            myPlanet.mapFaces(); 
             cout << "k = " << kay << endl; 
             break;
         case ']': 
-            if(kay<5) 
+            if(kay<7) 
                 kay++; 
             myPlanet.k = kay; 
             myPlanet.init();
-            myPlanet.mapFaces();
             cout << "k = " << kay << endl; 
             break;
         case 'd':
             yrot += 5.0;
             if(yrot > 360.0) yrot -= 360.0;
-            glutPostRedisplay();
             break;
         case 'a':
             yrot -= 5.0;
             if(yrot < -360.0) yrot += 360.0;
-            glutPostRedisplay();
             break;
         case 's'://GLUT_KEY_LEFT:
             xrot += 5.0;
             if(xrot > 360.0) xrot -= 360.0;
-            glutPostRedisplay();
             break;
         case 'w'://GLUT_KEY_RIGHT:
             xrot -= 5.0;
             if(xrot < -360.0) xrot += 360.0;
-            glutPostRedisplay();
             break;
         case ',':
             zoom += 0.1;
@@ -318,6 +340,85 @@ void handleKeypress(unsigned char key, int x, int y) {
         case 27: //Escape key
             exit(0);
     }
+    glutPostRedisplay();
+}
+
+void mouseButton(int button, int state, int x, int y){
+    y = window_height - y;
+    
+    if(button == GLUT_LEFT_BUTTON){ // orbitCam
+        if(state == GLUT_UP){
+            leftButtonDown = false; 
+            xi = -1;
+            yi = -1;
+        } 
+        else{
+            leftButtonDown = true; 
+            xi = x;
+            yi = y;
+        }
+    }
+    if(button == GLUT_MIDDLE_BUTTON){ // panObj
+        if(state == GLUT_UP){
+            middleButtonDown = false;
+            xi = -1;
+            yi = -1;
+        } 
+        else{
+            middleButtonDown = true;
+            xi = x;
+            yi = y;
+        }
+    }
+    if(button == GLUT_RIGHT_BUTTON){ // zoom
+        if(state == GLUT_UP){
+            rightButtonDown = false;
+            xi = -1;
+            yi = -1;
+        } 
+        else{
+            rightButtonDown = true;
+            xi = x;
+            yi = y;
+        }
+    }
+    
+	glutPostRedisplay(); // let glut know to redraw the screen
+}
+
+void mouseMotion(int x, int y){
+    y = window_height - y;
+
+	// YOUR CODE HERE
+	
+	if(leftButtonDown){
+	    float deltaX = x - xi;
+	    float deltaY = y - yi;
+	    theta += (deltaX * 0.1);
+	    phi += (deltaY * 0.1);
+	    xi = x;
+	    yi = y;
+	    yrot = theta;
+	    xrot = -phi;
+	}
+	
+	if(middleButtonDown){
+	    float deltaX = x - xi;
+	    float deltaY = y - yi;
+	    tx += (deltaX * 0.1);
+	    ty += (deltaY * 0.1);
+	    xi = x;
+	    yi = y;
+	}
+	
+	if(rightButtonDown){
+	    float deltaY = y - yi;
+	    zoom += (deltaY * 0.1);
+	    yi = y;
+	}
+	
+
+	glutPostRedisplay(); // let glut know to redraw the screen
 }
 
 void initRendering() {
@@ -377,7 +478,8 @@ int main(int argc, char** argv) {
     glutDisplayFunc(glutDisplay);
     glutReshapeFunc(glutReshape);
     glutIdleFunc(glutIdle);
-    
+    glutMouseFunc(mouseButton);
+	glutMotionFunc(mouseMotion);
     glutKeyboardFunc(handleKeypress);
     
     /*
@@ -400,8 +502,8 @@ int main(int argc, char** argv) {
     printf("ne = %d\n", ne);
 
     // Provide a cleanup routine for handling application exit.
-    atexit(exitHandler);
-    
+    //atexit(exitHandler);
+    initGL();
     initScene();
     
     glutMainLoop();

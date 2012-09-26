@@ -72,8 +72,8 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
-        neighbors = v.neighbors;
         positive = v.positive;
+        if(positive) neighbors = v.neighbors;
     }
     
     PlanetVertex( Vec3& v ){
@@ -95,8 +95,8 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
-        neighbors = v.neighbors;
         positive = v.positive;
+        if(positive) neighbors = v.neighbors;
     }
     
     PlanetVertex& operator=( const PlanetVertex& v ){
@@ -107,13 +107,13 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
-        neighbors = v.neighbors;
         positive = v.positive;
+        if(positive) neighbors = v.neighbors;
         return *this;
     }
     
     bool equals(const PlanetVertex& v) const {
-        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2] && positive == v.positive) return true;
+        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2]) return true;
         else return false;
     }
     
@@ -123,10 +123,25 @@ class PlanetVertex: public Vec3{
     
     void marry(PlanetVertex& v){
         if(positive && v.positive){
-            neighbors.push_back(v.id);
-            v.neighbors.push_back(id);
-            //cout << neighbors.size() << endl;
+            bool isNew = true;
+            for(int i=0;i<neighbors.size();i++){
+                if(neighbors[i]==v.id){
+                    isNew = false;
+                    break;
+                }
+            }
+            if(isNew){
+                neighbors.push_back(v.id);
+                v.neighbors.push_back(id);
+            }
         }
+    }
+    
+    bool isMarriedTo(PlanetVertex& v){
+        for(int i=0;i<neighbors.size();i++){
+            if(neighbors[i]==v.id) return true;
+        }
+        return true;
     }
     
 };
@@ -200,18 +215,68 @@ class PlanetFace{
 
 class PlanetCell{
     public: 
-    unsigned int id;
+    unsigned int id; //same as the center vertex id
     unsigned int centerId;
-    int owner;
-    vector<int> neighbors;
+    unsigned int owner; //id of the player who owns the territory
+    vector<unsigned int> neighbors; //same as the center vertex neighbors
+    vector<unsigned int> paramVerts; //parameter vertices
+    float altitude;
+    float longitude;
+    float latitude;
+    //bool water; //???
     
     PlanetCell(){
         id = -1;
-        centerId = -1;
         owner = -1;
+        altitude = 0;
+        longitude = 0;
+        latitude = 0;
     }
     
-    void setOwner(int him){
+    PlanetCell(PlanetVertex& v){
+        //id = v.id; //not a good idea
+        centerId = v.id;
+        owner = -1;
+        neighbors = v.neighbors;
+        altitude = v.altitude;
+        longitude = v.longitude;
+        latitude = v.latitude;
+    }
+    
+    PlanetCell( const PlanetCell& c ){
+        id = c.id; //critical
+        centerId = c.centerId;
+        owner = c.owner;
+        neighbors = c.neighbors;
+        paramVerts = c.paramVerts;
+        altitude = c.altitude;
+        longitude = c.longitude;
+        latitude = c.latitude;
+    }
+        
+    PlanetCell( PlanetCell& c ){
+        id = c.id; //critical
+        centerId = c.centerId;
+        owner = c.owner;
+        neighbors = c.neighbors;
+        paramVerts = c.paramVerts;
+        altitude = c.altitude;
+        longitude = c.longitude;
+        latitude = c.latitude;
+    }
+    
+    PlanetCell& operator=( const PlanetCell& c ){
+        id = c.id; //critical
+        centerId = c.centerId;
+        owner = c.owner;
+        neighbors = c.neighbors;
+        paramVerts = c.paramVerts;
+        altitude = c.altitude;
+        longitude = c.longitude;
+        latitude = c.latitude;
+    }
+    
+    void setOwner(unsigned int him){
         owner = him;
     }
 };
@@ -226,7 +291,7 @@ class VertexList{
     }
     
     void add(PlanetVertex& v){
-        v.id = currentId++;
+        v.id = currentId++; // DO NOT SWITCH THE ORDER OF THESE 2 LINES
         _vertices.push_back(v);
     }
     
@@ -246,6 +311,7 @@ class VertexList{
 	    _vertices.clear();
 	    currentId = 0;
 	}
+	
 };
 
 class FaceList{
@@ -290,8 +356,8 @@ class CellList{
     }
     
     void add(PlanetCell& c){
-        _cells.push_back(c);
         c.id = currentId++;
+        _cells.push_back(c);
     }
     
     PlanetCell& operator []( int i ){ 
@@ -300,6 +366,15 @@ class CellList{
 	
 	PlanetCell operator []( int i ) const { 
 	    return _cells[i]; 
+	}
+	
+	int size(){
+	    return _cells.size();
+	}
+	
+	void clear(){
+	    _cells.clear();
+	    currentId = 0;
 	}
 };
 
@@ -339,8 +414,13 @@ class Planet{
     void mapFaces();
     void drawFace (PlanetFace& f);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b);
+    PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
+    PlanetVertex midpoint (PlanetVertex& a, PlanetVertex& b);
+    PlanetVertex midpoint (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
     void render();
     void renderWireframe();
+    void generateCells();
+    void renderCells();
 };
 
 #endif
