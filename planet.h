@@ -31,12 +31,14 @@ class PlanetVertex: public Vec3{
     float longitude;
     float latitude;
     vector<int> neighbors;
+    bool positive;
     
     PlanetVertex(){
         id = -1;
         altitude = 0;
         longitude = 0;
         latitude = 0;
+        positive = true;
     }
     
     PlanetVertex( const float x, const float y, const float z ){
@@ -47,6 +49,7 @@ class PlanetVertex: public Vec3{
         altitude = 0;
         longitude = 0;
         latitude = 0;
+        positive = true;
     }
     
     PlanetVertex( const Vec3& v ){
@@ -57,15 +60,42 @@ class PlanetVertex: public Vec3{
         altitude = 0;
         longitude = 0;
         latitude = 0;
+        positive = true;
     }
         
     PlanetVertex( const PlanetVertex& v ){
         id = v.id; //critical
+        n[0] = v[0];
+        n[1] = v[1];
+        n[2] = v[2];
+        altitude = v.altitude;
+        longitude = v.longitude;
+        latitude = v.latitude;
+        positive = v.positive;
+    }
+    
+    PlanetVertex( Vec3& v ){
+        id = -1;
         n[0] = v[0]; 
         n[1] = v[1]; 
         n[2] = v[2];
+        altitude = 0;
+        longitude = 0;
+        latitude = 0;
+        positive = true;
     }
         
+    PlanetVertex( PlanetVertex& v ){
+        id = v.id; //critical
+        n[0] = v[0];
+        n[1] = v[1];
+        n[2] = v[2];
+        altitude = v.altitude;
+        longitude = v.longitude;
+        latitude = v.latitude;
+        positive = v.positive;
+    }
+    
     PlanetVertex& operator=( const PlanetVertex& v ){
         id = v.id; //critical
         n[0] = v[0]; 
@@ -74,12 +104,17 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
+        positive = v.positive;
         return *this;
     }
     
     bool equals(const PlanetVertex& v) {
         if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2]) return true;
         else return false;
+    }
+    
+    operator bool() const {
+        return positive;
     }
 };
 
@@ -90,6 +125,7 @@ class PlanetFace{
     Vec3 center;
     Vec3 normal;
     float angle;
+    bool positive;
     
     PlanetFace(){
         v[0] = -1;
@@ -98,6 +134,7 @@ class PlanetFace{
         center = Vec3(0,0,0);
         normal = Vec3(0,0,0);
         float angle = 0;
+        positive = true;
     }
     
     /*
@@ -118,6 +155,7 @@ class PlanetFace{
         center = (a + b + c)/3.0;
         normal = (b-a)^(c-a);
         angle = center.angle(normal);
+        positive = true;
     }
         
     PlanetFace(const PlanetFace& f){
@@ -127,6 +165,7 @@ class PlanetFace{
         center = f.center;
         normal = f.normal;
         angle = f.angle;
+        positive = f.positive;
     }
         
     PlanetFace& operator=(const PlanetFace& f){
@@ -137,8 +176,13 @@ class PlanetFace{
         center = f.center;
         normal = f.normal;
         angle = f.angle;
+        positive = f.positive;
         return *this;
-    }    
+    }
+    
+    operator bool() const {
+        return positive;
+    }
 };
 
 class PlanetCell{
@@ -276,9 +320,10 @@ class Planet{
     
     void init();
     void subdivide (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k);
-    void mapFace (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
+    void mapVertex(PlanetVertex& v);
+    void mapFace (PlanetFace& f);
     void mapFaces();
-    void drawFace (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
+    void drawFace (PlanetFace& f);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b);
     void render();
 };

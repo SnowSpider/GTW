@@ -30,7 +30,7 @@ static const float pi = 6.283185307179586232/2.0;
 Vec3 center(0.0,0.0,0.0); //The center of the sphere
 Vec3 axis(0.0, 1.0, 0.0); //axis
 Vec3 longZero(0.0, 0.0, 1.0); //longitude zero
-static const float radius = 1.0; 
+static const float radius = 0.8; 
 static float maxEdgeLength = 1.0;
 float spinAngle = 0.0;
 static bool overlayWireframe = false;
@@ -49,6 +49,33 @@ void createPlanet();
 
 Planet myPlanet(center, axis, longZero, radius, k);
 
+void drawAxis()
+{
+	//Vec3f c=(bbox.min+bbox.max)*0.5f;
+	//float L=(bbox.max-bbox.min).max() * 0.2;
+	
+	//Vec3f X={L,0,0}, Y={0,L,0}, Z={0,0,L};
+	
+	//glLineWidth(2.0);
+	
+	glBegin(GL_LINES);
+	
+	glColor3f(1.0,0.0,0.0);
+	glVertex3f(0,0,0);
+	glVertex3f(1,0,0);
+	
+	glColor3f(0.0,1.0,0.0);
+	glVertex3f(0,0,0);
+	glVertex3f(0,1,0);
+	
+	glColor3f(0.0,0.0,1.0);
+	glVertex3f(0,0,0);
+	glVertex3f(0,0,1);
+	
+	glEnd();
+	
+}
+
 void createPlanet(){
     
     myPlanet.init();
@@ -58,6 +85,7 @@ void createPlanet(){
 
 //Initializes the scene.  Handles initializing OpenGL stuff. 
 void initScene() {
+    
 	initGL();
 	createPlanet();
 	
@@ -97,7 +125,7 @@ The main routine for displaying the scene.  Gets the latest snapshot of state
 from the haptic thread and uses it to display a 3D cursor.
 */
 void drawSceneGraphics() {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           
 
 	// Spin the sphere
 	spinAngle += 0.6;
@@ -110,18 +138,21 @@ void drawSceneGraphics() {
 	
 	// Draw the geodesic sphere
 	glPushMatrix();
+	
 	//glRotatef(30.0, 0, 0, 1); //Makes the planet stand straight
 	glRotatef(180.0, 0, 0, 1);
 	//glRotatef(180, 0, 1, 0);
 	glRotatef(-45, 1, 0, 0);
-	glRotatef(90.0,0,1,0);
+	glRotatef(0.0,0,1,0);
 	glRotatef(rollRight, 0, 1, 0);
 	//glRotatef(spinAngle, b, a, 0.0); //Make sure that the wireframe spins at the same rate
 	//glRotatef(spinAngle, 0.0, 1.0, 0.0);
+	
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	
 	//createGeodesicSphere ();
 	//glCallList(sphereDL);
+	drawAxis();
 	myPlanet.render();
 	/*
 	Planet myPlanet(Vec3(0,0,0), Vec3(0,1,0), 1.0, 3);
@@ -141,7 +172,7 @@ void drawSceneGraphics() {
 		glRotatef(180.0, 0, 0, 1);
 		//glRotatef(180, 0, 1, 0);
 		glRotatef(-45, 1, 0, 0);
-		glRotatef(90.0,0,1,0);
+		glRotatef(0.0,0,1,0);
 		glRotatef(rollRight, 0, 1, 0);
 		//glRotatef(spinAngle, b, a, 0.0);
 		//glRotatef(spinAngle, 0.0, 1.0, 0.0);
@@ -157,7 +188,8 @@ void drawSceneGraphics() {
 }
 
 //GLUT callback for redrawing the view.
-void glutDisplay() {   
+void glutDisplay() {
+    
 	drawSceneGraphics();
 	glutSwapBuffers();
 }

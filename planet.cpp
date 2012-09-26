@@ -96,7 +96,11 @@ void Planet::init(){
 	cout << "init done" << endl;
 	cout << "number of vertices = " << vertices.size() << endl;
 	cout << "number of faces = " << faces.size() << endl;
-	
+	for(int i=0;i<vertices.size();i++){
+	    cout << "vertex " << i << ": (" << vertices[i][0] << "," 
+	                                    << vertices[i][1] << "," 
+	                                    << vertices[i][2] << ")" << endl;
+	}
 	for(int i=0;i<faces.size();i++){
 	    cout << "face " << i << ": (" << faces[i].v[0] << "," 
 	                                  << faces[i].v[1] << "," 
@@ -139,11 +143,11 @@ void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k
         if(bIsUnique) vertices.add(*tempB); 
         if(cIsUnique) vertices.add(*tempC);
         */
-        /*
-        vertices.add(a);
-        vertices.add(b); 
-        vertices.add(c);
-        */
+        
+        //vertices.add(a);
+        //vertices.add(b); 
+        //vertices.add(c);
+        
         /*
         a.neighbors.push_back(b.id);
         a.neighbors.push_back(c.id);
@@ -175,7 +179,21 @@ void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k
     }
 }
 
-void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
+void Planet::mapVertex(PlanetVertex& v){
+    Vec3 w(v[0], 0.0, v[2]); 
+	float latitude; 
+	latitude = v.angle(axis)/PI; //north-south cout << "1...";
+	float longitude; 
+	if(v[0]>0) longitude = (2.0*PI - w.angle(longZero))/PI/2.0; //east-west 
+	else longitude = w.angle(longZero)/PI/2.0; 
+	if(!(longitude>=0&&longitude<=1)) longitude = 0.0; //longitude is -1.#IND00; yes, I know my solution is ugly.
+}
+
+void Planet::mapFace(PlanetFace& f){
+    PlanetVertex& a = vertices[f.v[0]];
+    PlanetVertex& b = vertices[f.v[1]];
+    PlanetVertex& c = vertices[f.v[2]];
+    
     Vec3 faceCenter = (a + b + c)/ 3.0f; // face center
 	Vec3 faceNormal = faceCenter - center; // face normal
 	
@@ -184,7 +202,7 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	float h = height * ((color / 255.0f) - 0.5f);
     */
     
-    Vec3 cw = Vec3(c[0], 0.0, c[2]); 
+    Vec3 cw(c[0], 0.0, c[2]); 
 	float cLatitude; 
 	cLatitude = c.angle(axis)/PI; //north-south cout << "1...";
 	float cLongitude; 
@@ -192,7 +210,7 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	else cLongitude = cw.angle(longZero)/PI/2.0; 
 	if(!(cLongitude>=0&&cLongitude<=1)) cLongitude = 0.0; //longitude is -1.#IND00; yes, I know my solution is ugly.
     
-	Vec3 bw = Vec3(b[0], 0.0, b[2]);
+	Vec3 bw(b[0], 0.0, b[2]);
 	float bLatitude;
 	bLatitude = b.angle(axis)/PI; 
 	float bLongitude;
@@ -200,7 +218,7 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	else bLongitude = bw.angle(longZero)/PI/2.0; 
 	if(!(bLongitude>=0&&bLongitude<=1)) bLongitude = 0.0;
 	
-	Vec3 aw = Vec3(a[0], 0.0, a[2]);
+	Vec3 aw(a[0], 0.0, a[2]);
 	float aLatitude;
 	aLatitude = a.angle(axis)/PI; 
 	float aLongitude;
@@ -208,19 +226,85 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	else aLongitude = aw.angle(longZero)/PI/2.0;
 	if(!(aLongitude>=0&&aLongitude<=1)) aLongitude = 0.0;
     
+    a.longitude = aLongitude;
+	b.longitude = bLongitude;
+	c.longitude = cLongitude;
+	
+	a.latitude = aLatitude;
+	b.latitude = bLatitude;
+	c.latitude = cLatitude;
+    
 	/*
 	signed area = sum of 2-d cross product
 	U x V = Ux*Vy-Uy*Vx
 	http://howevangotburned.wordpress.com/2011/02/28/the-oddyssey-of-texturing-a-geodesic-dome/
 	*/
 	
+	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	//glColor3f(1.0,0.0,0.0);
+	
 	if( (cLongitude*bLatitude-cLatitude*bLongitude) +
 		(bLongitude*aLatitude-bLatitude*aLongitude) +
-		(aLongitude*cLatitude-aLatitude*cLongitude) < 0 ){
+		(aLongitude*cLatitude-aLatitude*cLongitude) < 0 ){ //signed area is negative
 		//glColor3f(1.0,0.0,0.0); //identify the reversed triangles
+		
+		/*
 		if(c[0]<=0) cLongitude++;
 		if(b[0]<=0) bLongitude++;
 		if(a[0]<=0) aLongitude++;
+		*/
+		
+		if(c[0]<=0){
+		    //cLongitude++;
+		    PlanetVertex newC(c);
+		    //newC.longitude = cLongitude;
+		    //newC.latitude = cLatitude;
+		    newC.longitude++;
+		    newC.positive = false;
+		    
+		    vertices.add(newC);
+		    f.v[2] = newC.id;
+		    //cout << "c.id = " << c.id << ", newC.id = " << newC.id << endl;
+		    //cout << "c.longitude = " << c.longitude << endl;
+		    //cout << "c.latitude = " << cLatitude << endl;
+		    //cout << "newC.longitude = " << newC.longitude << endl;
+		    //cout << "newC.latitude = " << newC.latitude << endl;
+		}
+		if(b[0]<=0){
+		    //bLongitude++;
+		    PlanetVertex newB(b);
+		    //newB.longitude = bLongitude;
+		    //newB.latitude = bLatitude;
+		    newB.longitude++;
+		    newB.positive = false;
+		    
+		    vertices.add(newB);
+		    f.v[1] = newB.id;
+		    //cout << "b.id = " << b.id << ", newB.id = " << newB.id << endl;
+		    //cout << "b.longitude = " << b.longitude << endl;
+		    //cout << "b.latitude = " << bLatitude << endl;
+		    //cout << "newB.longitude = " << newB.longitude << endl;
+		    //cout << "newB.latitude = " << newB.latitude << endl;
+		}
+		if(a[0]<=0){
+		    //aLongitude++;
+		    PlanetVertex newA(a);
+		    //newA.longitude = aLongitude;
+		    //newA.latitude = aLatitude;
+		    newA.longitude++;
+		    newA.positive = false;
+		    
+		    vertices.add(newA);
+		    f.v[0] = newA.id;
+		    //cout << "a.id = " << a.id << ", newA.id = " << newA.id << endl;
+		    //cout << "a.longitude = " << a.longitude << endl;
+		    //cout << "a.latitude = " << aLatitude << endl;
+		    //cout << "newA.longitude = " << newA.longitude << endl;
+		    //cout << "newA.latitude = " << newA.latitude << endl;
+		    
+		}
+		
+		f.positive = false;
 	}
 	
 	// terrain mapping 
@@ -234,6 +318,7 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	glVertex3d(a[0], a[1], a[2]); //Vertex a
 	*/
 	
+	/*
 	a.longitude = aLongitude;
 	b.longitude = bLongitude;
 	c.longitude = cLongitude;
@@ -241,29 +326,29 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	a.latitude = aLatitude;
 	b.latitude = bLatitude;
 	c.latitude = cLatitude;
+	*/
 }
 
 
 
 void Planet::mapFaces(){
     for(int i=0;i<faces.size();i++){
+        /*
         mapFace( vertices[faces[i].v[0]],
                  vertices[faces[i].v[1]],
                  vertices[faces[i].v[2]] );
+        */
+        mapFace( faces[i] );
     }
 }
 
-void Planet::drawFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
+void Planet::drawFace(PlanetFace& f){
+    PlanetVertex& a = vertices[f.v[0]]; 
+    PlanetVertex& b = vertices[f.v[1]]; 
+    PlanetVertex& c = vertices[f.v[2]]; 
+    
 	Vec3 triCenter = (a + b + c)/ 3.0f; // face center
 	Vec3 triNormal = triCenter - center; // face normal
-	
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, _textureId);
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	
-	glColor3f(1.0f, 1.0f, 1.0f);
 	
 	glBegin(GL_TRIANGLES);
 	    glNormal3d(triNormal[0], triNormal[1], triNormal[2]); //Normal for lighting
@@ -274,6 +359,8 @@ void Planet::drawFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 		glTexCoord2f(a.longitude, a.latitude);
 		glVertex3d(a[0], a[1], a[2]); //Vertex a
 	glEnd();
+	
+	
 }
 
 PlanetVertex Planet::midpointOnSphere (PlanetVertex& a, PlanetVertex& b){
@@ -282,24 +369,47 @@ PlanetVertex Planet::midpointOnSphere (PlanetVertex& a, PlanetVertex& b){
 	unitRadial.normalize();
 	PlanetVertex midPointOnSphere = center + (unitRadial * radius);
 	
-	
 	for(int i=0;i<vertices.size();i++){
 	    if(vertices[i].equals(midPointOnSphere)){
 	        return vertices[i];
 	    }
 	}
 	
+	cout << "Moo...";
 	vertices.add(midPointOnSphere);
+	cout << "I say." << endl;
 	
 	return midPointOnSphere;
 }
 
 void Planet::render(){
+    glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, _textureId);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	
+	glColor3f(1.0f, 1.0f, 1.0f);
+	
     for(int i=0;i<faces.size();i++){
-        drawFace( vertices[faces[i].v[0]],
-                  vertices[faces[i].v[1]],
-                  vertices[faces[i].v[2]] );
+        //if(!faces[i]) glColor3f(0.5,0.5,0.5);
+        drawFace( faces[i] );
+        //glColor3f(1,1,1);
     }
+    glDisable(GL_TEXTURE_2D);
+    
+    /*
+    for(int i=0;i<vertices.size();i++){
+        if(!vertices[i]){
+            glBegin(GL_LINES);
+	        glColor3f(1.0,0.0,0.0);
+	        glVertex3f(0,0,0);
+	        glVertex3f(vertices[i][0]*2,vertices[i][1]*2,vertices[i][2]*2);
+	        glEnd();
+        }
+    }
+    */
+    
 }
 
 
