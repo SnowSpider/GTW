@@ -87,7 +87,18 @@ class Vec3{
     float angle( const Vec3& v ) const {
         float s = sqrt(length2() * v.length2());
 		//btFullAssert(s != btScalar(0.0));
-		if(s == 0.0) cout << "s == 0" << endl;//exit(0);
+		/*
+		if(s == 0.0){
+		    cout << "n = (" << n[0] << ", "
+		                    << n[1] << ", "
+		                    << n[2] << ")" << endl;
+		    cout << "v = (" << v[0] << ", "
+		                    << v[1] << ", "
+		                    << v[2] << ")" << endl << endl;
+		    return 666;
+		}
+		*/
+		//exit(0);
 		return acos(dot(v) / s);
     }
     

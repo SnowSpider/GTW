@@ -34,7 +34,8 @@ E = the number of edges
 k = frequency of subdivision
 */
 
-int kay = 0;
+int kay = 3;
+Planet myPlanet(Vec3(0,0,0), Vec3(0,1,0), 1.0, kay);
 
 static int k = 0; //The frequency of subdivision
 static int nv = 12; //The number of vertices
@@ -295,7 +296,8 @@ void createGeodesicSphere () {
 //Initializes the scene.  Handles initializing OpenGL stuff. 
 void initScene() {
 	initGL();
-	createGeodesicSphere ();
+	
+	//createGeodesicSphere ();
 }
 
 //Sets up general OpenGL rendering properties: lights, depth buffering, etc.
@@ -353,8 +355,15 @@ void drawSceneGraphics() {
 	//glRotatef(spinAngle, 0.0, 1.0, 0.0);
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	
-	createGeodesicSphere ();
-	glCallList(sphereDL);
+	//createGeodesicSphere ();
+	//glCallList(sphereDL);
+	
+	
+    myPlanet.k = kay;
+    myPlanet.init();
+    myPlanet.refine();
+	myPlanet.render();
+	
 	
 	/*
 	Planet myPlanet(Vec3(0,0,0), Vec3(0,1,0), 1.0, 3);
@@ -436,7 +445,22 @@ void exitHandler() {
 
 void handleKeypress(unsigned char key, int x, int y) {
 	switch (key) {
-	    case '[': if(kay>0) kay--; cout << "k = " << kay << endl; break;
+	    case '[': if(kay>0) kay--; cout << "k = " << kay << endl; 
+	    cout << "faces.size() = " << myPlanet.faces.size() << endl;
+	    cout << "vertices.size() = " << myPlanet.vertices.size() << endl;
+	    for(int i=0;i<myPlanet.faces.size();i++){
+	        cout << "face # " << i << ": " << endl;
+	        cout << "   a = (" << (*(myPlanet.faces[i].mya))[0] << ", " 
+	                           << (*(myPlanet.faces[i].mya))[1] << ", "
+	                           << (*(myPlanet.faces[i].mya))[2] << ")" << endl;
+	        cout << "   b = (" << (*(myPlanet.faces[i].myb))[0] << ", " 
+	                           << (*(myPlanet.faces[i].myb))[1] << ", "
+	                           << (*(myPlanet.faces[i].myb))[2] << ")" << endl;
+	        cout << "   c = (" << (*(myPlanet.faces[i].myc))[0] << ", " 
+	                           << (*(myPlanet.faces[i].myc))[1] << ", "
+	                           << (*(myPlanet.faces[i].myc))[2] << ")" << endl;
+	    }
+	    break;
 	    case ']': if(kay<5) kay++; cout << "k = " << kay << endl; break;
 		case 27: //Escape key
 			exit(0);
@@ -485,6 +509,7 @@ void handleResize(int w, int h) {
 }
 
 int main(int argc, char** argv) {
+    
 	btVector3 vectorA(1.0, 0.0, 0.0);
 	btVector3 vectorB(-1.0, -1.0, 0.0); 
 	printf("Angle1 = %f\n", vectorA.angle(vectorB)/pi);
