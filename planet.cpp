@@ -118,6 +118,7 @@ void Planet::subdivide(const PlanetVertex& a, const PlanetVertex& b, const Plane
         faces.push_back(tempFace);
         cout << "drawFace..." << endl;
 		drawFace (a, b, c);
+		//drawTriangle (a, b, c);
 		//nf++;
     }
     else{
@@ -193,7 +194,7 @@ void Planet::drawFace (const Vec3& a, const Vec3& b, const Vec3& c) {
 			if(a[0]<=0) aLongitude++;
 		} 
 
-		// terrain mapping ()
+		// terrain mapping 
 
 		/*
 		glTexCoord2f(cLongitude, cLatitude);
@@ -224,10 +225,38 @@ Planet::PlanetVertex Planet::midpointOnSphere (const PlanetVertex& a, const  Pla
 	return midPointOnSphere;
 }
 
+void Planet::drawTriangle(const PlanetVertex& a, const PlanetVertex& b, const PlanetVertex& c){
+	Vec3 triCenter = (a + b + c)/ 3.0f; // face center
+	Vec3 triNormal = triCenter - center; // face normal
+	
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, _textureId2);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	
+	glColor3f(1.0f, 1.0f, 1.0f);
+	
+	glBegin(GL_TRIANGLES);
+	    glNormal3d(triNormal[0], triNormal[1], triNormal[2]); //Normal for lighting
+	    glTexCoord2f(c.longitude, c.latitude);
+		glVertex3d(c[0], c[1], c[2]); //Vertex c
+		glTexCoord2f(b.longitude, b.latitude);
+		glVertex3d(b[0], b[1], b[2]); //Vertex b
+		glTexCoord2f(a.longitude, a.latitude);
+		glVertex3d(a[0], a[1], a[2]); //Vertex a
+	glEnd();
+}
+
 void Planet::render(){
+    
     cout << "render..." << endl;
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	glCallList(sphereDL2);
+	
+	
 }
+
+
 
 

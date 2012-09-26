@@ -172,7 +172,8 @@ If the length of the traingle edge is smaller than the max length specified
 */
 void drawIcosahedron (const btVector3& a,
 					  const btVector3& b,
-					  const btVector3& c) {
+					  const btVector3& c,
+					  const int _k) {
 	btVector3 edge1 = a - b;
 	btVector3 edge2 = b - c;
 	btVector3 edge3 = c - a;
@@ -182,11 +183,19 @@ void drawIcosahedron (const btVector3& a,
 	float mag3 = edge3.length();
 	
 	// if all edges are short enough
+	/*
 	if ((mag1 < maxEdgeLength) && (mag2 < maxEdgeLength) &&	(mag3 < maxEdgeLength))	{
 		// draw triangle
 		drawTriangle (a, b, c);
 		nf++;
 	}
+	*/
+	if (_k==0)	{
+		// draw triangle
+		drawTriangle (a, b, c);
+		nf++;
+	}
+	
 	else { // otherwise subdivide and recurse
 		// find edge midpoints
 		const btVector3 ab = midpointOnSphere (a, b);
@@ -194,10 +203,10 @@ void drawIcosahedron (const btVector3& a,
 		const btVector3 ca = midpointOnSphere (c, a);
 
 		// Create 4 sub-divided triangles an recurse
-		drawIcosahedron ( a, ab, ca);
-		drawIcosahedron (ab,  b, bc);
-		drawIcosahedron (ca, bc,  c);
-		drawIcosahedron (ab, bc, ca);
+		drawIcosahedron ( a, ab, ca, _k-1);
+		drawIcosahedron (ab,  b, bc, _k-1);
+		drawIcosahedron (ca, bc,  c, _k-1);
+		drawIcosahedron (ab, bc, ca, _k-1);
 	}
 }
 
@@ -259,26 +268,26 @@ void createGeodesicSphere () {
 	glNewList(sphereDL,GL_COMPILE);
 
 	// draw the icosahedron
-	drawIcosahedron (v1, v2, v3		);
-	drawIcosahedron (v4, v3, v2		);
-	drawIcosahedron (v4, v5, v6		);
-	drawIcosahedron (v4, v9, v5		);
-	drawIcosahedron (v1, v7, v8		);
-	drawIcosahedron (v1, v10, v7	);
-	drawIcosahedron (v5, v11, v12	);
-	drawIcosahedron (v7, v12, v11	); 
-	drawIcosahedron (v3, v6, v10	);
-	drawIcosahedron (v12, v10, v6	);
-	drawIcosahedron (v2, v8, v9		);
-	drawIcosahedron (v11, v9, v8	);
-	drawIcosahedron (v4, v6, v3		);
-	drawIcosahedron (v4, v2, v9		);
-	drawIcosahedron (v1, v3, v10	);
-	drawIcosahedron (v1, v8, v2		);
-	drawIcosahedron (v7, v10, v12	);
-	drawIcosahedron (v7, v11, v8	);
-	drawIcosahedron (v5, v12, v6	);
-	drawIcosahedron (v5, v9, v11	);
+	drawIcosahedron (v1, v2, v3		, kay);
+	drawIcosahedron (v4, v3, v2		, kay);
+	drawIcosahedron (v4, v5, v6		, kay);
+	drawIcosahedron (v4, v9, v5		, kay);
+	drawIcosahedron (v1, v7, v8		, kay);
+	drawIcosahedron (v1, v10, v7	, kay);
+	drawIcosahedron (v5, v11, v12	, kay);
+	drawIcosahedron (v7, v12, v11	, kay); 
+	drawIcosahedron (v3, v6, v10	, kay);
+	drawIcosahedron (v12, v10, v6	, kay);
+	drawIcosahedron (v2, v8, v9		, kay);
+	drawIcosahedron (v11, v9, v8	, kay);
+	drawIcosahedron (v4, v6, v3		, kay);
+	drawIcosahedron (v4, v2, v9		, kay);
+	drawIcosahedron (v1, v3, v10	, kay);
+	drawIcosahedron (v1, v8, v2		, kay);
+	drawIcosahedron (v7, v10, v12	, kay);
+	drawIcosahedron (v7, v11, v8	, kay);
+	drawIcosahedron (v5, v12, v6	, kay);
+	drawIcosahedron (v5, v9, v11	, kay);
 
 	glEndList();
 }
@@ -343,9 +352,11 @@ void drawSceneGraphics() {
 	//glRotatef(spinAngle, b, a, 0.0); //Make sure that the wireframe spins at the same rate
 	//glRotatef(spinAngle, 0.0, 1.0, 0.0);
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	//glCallList(sphereDL);
 	
+	createGeodesicSphere ();
+	glCallList(sphereDL);
 	
+	/*
 	Planet myPlanet(Vec3(0,0,0), Vec3(0,1,0), 1.0, 3);
 	cout << "init..." << endl;
 	myPlanet.init();
@@ -353,7 +364,7 @@ void drawSceneGraphics() {
 	myPlanet.refine();
 	cout << "done." << endl;
 	myPlanet.render();
-	
+	*/
 	
 	glPopMatrix();
 	// Draw the overlay wireframe
@@ -409,7 +420,7 @@ void glutReshape(int width, int height) {
 
 	// Place the camera down the Z axis looking at the origin.
 	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();            
+	glLoadIdentity();
 	gluLookAt(0, 0, nearDist + 1.0,
 		0, 0, 0,
 		0, 1, 0);
@@ -425,8 +436,8 @@ void exitHandler() {
 
 void handleKeypress(unsigned char key, int x, int y) {
 	switch (key) {
-	    case '[': if(kay>0) kay--; break;
-	    case ']': if(kay<10) kay++; break;
+	    case '[': if(kay>0) kay--; cout << "k = " << kay << endl; break;
+	    case ']': if(kay<5) kay++; cout << "k = " << kay << endl; break;
 		case 27: //Escape key
 			exit(0);
 	}
@@ -497,7 +508,7 @@ int main(int argc, char** argv) {
 	glutReshapeFunc(glutReshape);
 	glutIdleFunc(glutIdle);
 	
-	//glutKeyboardFunc(handleKeypress);
+	glutKeyboardFunc(handleKeypress);
 	
 	/*
 	V = 10k^2 + 2

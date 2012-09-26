@@ -113,7 +113,7 @@ class Planet{
     void subdivide(const PlanetVertex& a, const PlanetVertex& b, const PlanetVertex& c, const int& _k);
     void drawFace (const Vec3& a, const Vec3& b, const Vec3& c);
     PlanetVertex midpointOnSphere (const PlanetVertex& a, const  PlanetVertex& b);
-    
+    void drawTriangle(const PlanetVertex& a, const PlanetVertex& b, const PlanetVertex& c);
     void render();
     
 };
