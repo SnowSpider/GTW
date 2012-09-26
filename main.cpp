@@ -46,7 +46,7 @@ Mat3 lastRot ( 1.0f,  0.0f,  0.0f, // NEW: Last Rotation
 Mat3 curRot ( 1.0f,  0.0f,  0.0f, // NEW: This Rotation
               0.0f,  1.0f,  0.0f,
               0.0f,  0.0f,  1.0f );
-ArcBallT ArcBall(640.0f, 480.0f);
+ArcBall myArcBall(640.0f, 480.0f);
 Vec2 MousePt;
 
 // Debugging flags
@@ -190,7 +190,7 @@ void resize(int w, int h){
     gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    ArcBall.setBounds((GLfloat)w, (GLfloat)h);
+    myArcBall.setBounds((GLfloat)w, (GLfloat)h);
 }
 
 void handleKeyPress(unsigned char key, int x, int y){
@@ -269,7 +269,7 @@ Vec3 getGLPos(int x, int y){
     Vec3 rayDir( posX, posY, posZ );
     
     rayDir = rayDir - rayP;
-	rayDir.normalize();
+    rayDir.normalize();
     
     return rayP;
     */
@@ -342,13 +342,13 @@ void motionUpdate(){ // Perform Motion Updates Here
         if (leftButtonDown){ // First Click
             isDragging = true; // Prepare For Dragging
             lastRot = curRot; // Set Last Static Rotation To Last Dynamic One
-            ArcBall.click(MousePt); // Update Start Vector And Prepare For Dragging
+            myArcBall.click(MousePt); // Update Start Vector And Prepare For Dragging
         }
     }
     else{
         if (leftButtonDown){ // Still Clicked, So Still Dragging
             Quat curQuat;
-            ArcBall.drag(MousePt, curQuat); // Update End Vector And Get Rotation As Quaternion
+            myArcBall.drag(MousePt, curQuat); // Update End Vector And Get Rotation As Quaternion
             //cout << "curQuat = (" << curQuat.x << "," << curQuat.y << "," << curQuat.z << "," << curQuat.w << ")" << endl;
             curRot = curQuat.toRotMat(); // Convert Quaternion Into Matrix3fT
             curRot *= lastRot; // Accumulate Last Rotation Into This One
