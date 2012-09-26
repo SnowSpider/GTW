@@ -15,6 +15,7 @@
 #include "planet.h"
 #include "quat.h"
 #include <math.h>
+#include "arcball.h"
 
 using namespace std;
 
@@ -45,6 +46,12 @@ Quat rotQuat;
 Quat curQuat;
 
 const float PIOVER180 = 3.14159265/180.f;
+
+ArcBall ArcBall(640.0f, 480.0f);
+Vec2 curMousePos;
+bool isClicked  = false; // Clicking The Mouse?
+bool isRClicked = false; // Clicking The Right Mouse Button?
+bool isDragging = false; // Dragging The Mouse?
 
 // Debugging flags
 bool drawPlanet = true;
@@ -100,6 +107,7 @@ void trackballRotate(float x1, float y1, float x2, float y2){
     Vec3 normal = v1 ^ v2;
     float theta = acos(v1*v2);
     rotQuat.fromAxis(normal, theta);
+    cout << "Axis of rotation = " << normal << endl;
     curQuat = lastQuat * rotQuat;
     lastQuat = curQuat;
 }
@@ -115,20 +123,20 @@ void initGL(){
     static const GLfloat light0_diffuse[] = {0.9f, 0.9f, 0.9f, 0.9f};   
     static const GLfloat light0_direction[] = {1.0f, 1.0f, 1.4f, 0.0f};    
 
-    // Enable depth buffering for hidden surface removal.
+ // Enable depth buffering for hidden surface removal.
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_DEPTH_TEST);
 
-    // Cull back faces.
+ // Cull back faces.
     glCullFace(GL_BACK);
     glEnable(GL_CULL_FACE);
 
-    // Setup other misc features.
+ // Setup other misc features.
     glEnable(GL_LIGHTING);
     glEnable(GL_NORMALIZE);
     glShadeModel(GL_FLAT);
 
-    // Setup lighting model.
+ // Setup lighting model.
     glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);    
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, light_model_ambient);
@@ -141,26 +149,27 @@ void buildPlanet(){
     myPlanet.init();
 }
 
-void drawScene(){
-    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-    
-    if(drawAxis) myPlanet.renderAxis();
-    if(drawPlanet) myPlanet.renderEarth();
-    
-    glFlush();
-}
+void drawScene(void){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear Screen And Depth Buffer
+    glLoadIdentity(); // Reset The Current Modelview Matrix
+    glTranslatef(0.0f,0.0f,-6.0f); // Move Into The Screen 6.0
 
-void drawRotatedScene(){
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix(); { // prevents rotation after releasing mouse button
-        glMultMatrixf((GLfloat*)curQuat.getMatrix().mat);
-        drawScene();
-    } glPopMatrix();
+    glPushMatrix(); // NEW: Prepare Dynamic Transform
+        glMultMatrixf((GLfloat*)curQuat.getMatrix().mat); // NEW: Apply Dynamic Transform
+        if(drawAxis) myPlanet.renderAxis();
+        if(drawPlanet){
+            glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+            myPlanet.renderEarth();
+        }
+    glPopMatrix(); // NEW: Unapply Dynamic Transform
+    
+    glFlush (); // Flush The GL Rendering Pipeline
 }
 
 void display(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    drawRotatedScene();
+ //drawRotatedScene();
+    drawScene();
     glutSwapBuffers();
 }
 
@@ -170,15 +179,15 @@ void resize(int w, int h){
     glLoadIdentity();
     gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
     
-    // Place the camera down the Z axis looking at the origin.
+ // Place the camera down the Z axis looking at the origin.
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    
+    /*
     gluLookAt(0, 0, 2.4 + 1.0,
               0, 0, 0,
               0, 1, 0);
-    
+    */
 }
 
 void handleKeyPress(unsigned char key, int x, int y){
@@ -240,6 +249,8 @@ void mouseButton(int button, int state, int x, int y){
             leftButtonDown = true; 
             xi = x;
             yi = y;
+            curMousePos.x = x;
+            curMousePos.y = y;
         }
     }
     if(button == GLUT_MIDDLE_BUTTON){ // panObj
@@ -314,7 +325,7 @@ int main(int argc, char** argv) {
     glutInitWindowSize(window_width, window_height);
     
     glutCreateWindow("Global Thermonuclear War");
-    //scene_spin_context.setWindow(scene_window, scene_animate);
+ //scene_spin_context.setWindow(scene_window, scene_animate);
     
     initGL();
     buildPlanet();

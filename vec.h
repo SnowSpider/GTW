@@ -17,7 +17,7 @@ class Vec2{
     float& operator []( int i );
     float operator []( int i ) const;
     bool equals(const Vec2& v);
-    void zero();
+    void clear();
     
     Vec2 operator-( const Vec2& v ) const;
     Vec2 operator+( const Vec2& v ) const;
@@ -44,7 +44,7 @@ class Vec3{
     float& operator []( int i );
     float operator []( int i ) const;
     bool equals(const Vec3& v);
-    void zero();
+    void clear();
     
     Vec3 operator-( const Vec3& v ) const;
     Vec3 operator+( const Vec3& v ) const;

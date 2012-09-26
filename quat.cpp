@@ -26,7 +26,7 @@ Quat::Quat( const float x, const float y, const float z, const float w ){
 Quat::Quat( const Quat& q ){
     *this = q;
 }
-void Quat::zero(){
+void Quat::clear(){
     x = y = z = 0;
 }
 void Quat::set( const Vec3& v ){

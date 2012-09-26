@@ -30,7 +30,7 @@ bool Vec2::equals(const Vec2& v){
     if(x==v.x && y==v.y) return true;
     else return false;
 }
-void Vec2::zero(){
+void Vec2::clear(){
     x = 0.0;
     y = 0.0;
 }
@@ -110,7 +110,7 @@ bool Vec3::equals(const Vec3& v) {
     else return false;
 }
 
-void Vec3::zero(){
+void Vec3::clear(){
     x = 0.0;
     y = 0.0;
     z = 0.0;

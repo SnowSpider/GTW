@@ -15,7 +15,7 @@ class Quat{
     Quat( const float x, const float y, const float z, const float w );
     Quat( const Quat& q );
     
-    void zero();
+    void clear();
     void set( const Vec3& v );
     void set( const Quat& q );
     void negative(const Quat& q);

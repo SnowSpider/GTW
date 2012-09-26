@@ -10,40 +10,43 @@
 using namespace std;
 
 Mat3::Mat3(){ 
-    m[0][0] = 0.0;
-	m[0][1] = 0.0;
-    m[0][2] = 0.0;
-    m[1][0] = 0.0;
-    m[1][1] = 0.0;
-    m[1][2] = 0.0;
-    m[2][0] = 0.0;
-    m[2][1] = 0.0;
-    m[2][2] = 0.0;
+    m[0] = 0.0;
+	m[1] = 0.0;
+    m[2] = 0.0;
+    m[3] = 0.0;
+    m[4] = 0.0;
+    m[5] = 0.0;
+    m[6] = 0.0;
+    m[7] = 0.0;
+    m[8] = 0.0;
 }
     
 Mat3::Mat3( const float m0, const float m3, const float m6,
 	        const float m1, const float m4, const float m7,
             const float m2, const float m5, const float m8 ){ 
-    m[0][0] = m0; 
-    m[0][1] = m1; 
-    m[0][2] = m2;
-    m[1][0] = m3; 
-    m[1][1] = m4; 
-    m[1][2] = m5;
-    m[2][0] = m6; 
-    m[2][1] = m7; 
-    m[2][2] = m8;
+    m[0] = m0; 
+    m[1] = m1; 
+    m[2] = m2;
+    m[3] = m3; 
+    m[4] = m4; 
+    m[5] = m5;
+    m[6] = m6; 
+    m[7] = m7; 
+    m[8] = m8;
 }
 	
-float* Mat3::operator [](int i) { 
+float& Mat3::operator [](int i) { 
 	return m[i];
+}
+float Mat3::operator []( int i ) const {
+    return m[i];
 }
 	
 Vec3 Mat3::operator*( const Vec3& v ) const {
     Vec3 result;
-    for( int i=0; i<3; i++ ){
-        for( int j=0; j<3; j++ ){
-            result[i] += m[i][j] * v[j];
+    for(int i=0;i<3;i++){
+        for(int j=0;j<3;j++){
+            result[i] += m[i*3 + j] * v[j]; 
         }
     }
     return result;
@@ -99,8 +102,10 @@ float Mat4::operator []( int i ) const {
 
 //Basic transformations
 Mat4 Mat4::CreateIdentity(){
-    //is already an identity matrix..
-    Mat4 pOut;
+    Mat4 pOut(1,0,0,0,
+              0,1,0,0,
+              0,0,1,0,
+              0,0,0,1);
     return pOut;
 }
 
