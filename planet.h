@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <vector>
-#include "vec3.h"
+#include "vec.h"
 
 using namespace std;
 
@@ -42,11 +42,11 @@ class PlanetVertex: public Vec3{
         positive = true;
     }
     
-    PlanetVertex( const float x, const float y, const float z ){
+    PlanetVertex( const float a, const float b, const float c ){
         id = -1;
-        n[0] = x;
-        n[1] = y;
-        n[2] = z;
+        x = a;
+        y = b;
+        z = c;
         altitude = 0;
         longitude = 0;
         latitude = 0;
@@ -55,9 +55,9 @@ class PlanetVertex: public Vec3{
     
     PlanetVertex( const Vec3& v ){
         id = -1;
-        n[0] = v[0]; 
-        n[1] = v[1]; 
-        n[2] = v[2];
+        x = v.x; 
+        y = v.y; 
+        z = v.z;
         altitude = 0;
         longitude = 0;
         latitude = 0;
@@ -66,9 +66,9 @@ class PlanetVertex: public Vec3{
     
     PlanetVertex( const PlanetVertex& v ){
         id = v.id; //critical
-        n[0] = v[0];
-        n[1] = v[1];
-        n[2] = v[2];
+        x = v.x;
+        y = v.y;
+        z = v.z;
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
@@ -78,9 +78,9 @@ class PlanetVertex: public Vec3{
     
     PlanetVertex( Vec3& v ){
         id = -1;
-        n[0] = v[0]; 
-        n[1] = v[1]; 
-        n[2] = v[2];
+        x = v.x; 
+        y = v.y; 
+        z = v.z;
         altitude = 0;
         longitude = 0;
         latitude = 0;
@@ -89,9 +89,9 @@ class PlanetVertex: public Vec3{
         
     PlanetVertex( PlanetVertex& v ){
         id = v.id; //critical
-        n[0] = v[0];
-        n[1] = v[1];
-        n[2] = v[2];
+        x = v.x;
+        y = v.y;
+        z = v.z;
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
@@ -101,9 +101,9 @@ class PlanetVertex: public Vec3{
     
     PlanetVertex& operator=( const PlanetVertex& v ){
         id = v.id; //critical
-        n[0] = v[0]; 
-        n[1] = v[1]; 
-        n[2] = v[2];
+        x = v.x; 
+        y = v.y; 
+        z = v.z;
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
@@ -113,7 +113,7 @@ class PlanetVertex: public Vec3{
     }
     
     bool equals(const PlanetVertex& v) const {
-        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2]) return true;
+        if(x==v.x && y==v.y && z==v.z) return true;
         else return false;
     }
     

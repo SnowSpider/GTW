@@ -13,6 +13,7 @@
 using namespace std;
 
 GLuint _textureId; //The id of the texture
+GLuint id_darkSide;
 
 //Makes the image into a texture, and returns the id of the texture
 GLuint loadTexture(Image* image) {
@@ -39,6 +40,10 @@ void Planet::init(){ //char* textureFile, char* terrainFile, float altitudeMulti
     Image* image = loadBMP("earth.bmp");
     _textureId = loadTexture(image);
     delete image;
+    
+    Image* darkSide = loadBMP("earthlights1k.bmp");
+    id_darkSide = loadTexture(darkSide);
+    delete darkSide;
     
     const float sqrt5 = sqrt (5.0f);
     const float phi = (1.0f + sqrt5) * 0.5f;
@@ -246,10 +251,10 @@ void Planet::mapFace(PlanetFace& f){
     if(aLongitude==0 && aLatitude==0){
         
     }
-    else if(aLongitude==0 && aLatitude==0){
+    else if(bLongitude==0 && bLatitude==0){
         
     }
-    else if(aLongitude==0 && aLatitude==0){
+    else if(cLongitude==0 && cLatitude==0){
         
     }
     */
@@ -386,6 +391,23 @@ void Planet::render(){
     glColor3f(1.0f, 1.0f, 1.0f);
     
     for(int i=0;i<faces.size();i++){
+        
+        /*
+        //dark side
+        PlanetFace& currentFace = faces[i];
+        float currentLongitude = (vertices[currentFace.v[0]].longitude +
+                                  vertices[currentFace.v[1]].longitude +
+                                  vertices[currentFace.v[2]].longitude) / 3.0;
+        if(currentLongitude > 0.5){
+            glBindTexture(GL_TEXTURE_2D, id_darkSide);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        }
+        else{
+            glBindTexture(GL_TEXTURE_2D, _textureId);
+        }
+        */
+        
         //if(!faces[i]) glColor3f(0.5,0.0,0.0);
         drawFace( faces[i] );
         //glColor3f(1,1,1);

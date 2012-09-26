@@ -14,6 +14,8 @@
 
 #include "imageloader.h"
 #include "planet.h"
+#include "quaternion.h"
+#include "camera.h"
 
 using namespace std;
 
@@ -61,6 +63,7 @@ float theta = 0.0f;
 float phi = 0.0f;
 
 float altitudeMultiplier = 0.0;
+float moveSpeed = 0.05;
 
 void renderAxis();
 void createPlanet();
@@ -79,6 +82,7 @@ void initRendering();
 void handleResize();
 
 Planet myPlanet(center, axis, longZero, radius, k);
+//Camera myCamera(0.5, 0.5);
 
 void renderAxis()
 {
@@ -109,7 +113,8 @@ void renderAxis()
 }
 
 void createPlanet(){
-    myPlanet.init();
+    
+    myPlanet.init();    
 }
 
 //Initializes the scene.  Handles initializing OpenGL stuff. 
@@ -229,7 +234,87 @@ void glutIdle() {
     glutPostRedisplay();
 }
 
-void camera(void){
+/*
+void SelectObjects(GLint x, GLint y) 
+{ 
+    GLuint selectBuff[64];                               
+    GLint hits, viewport[4];                             
+      
+    glSelectBuffer(64, selectBuff);                      
+    glGetIntegerv(GL_VIEWPORT, viewport);                
+    glMatrixMode(GL_PROJECTION);                         
+    glPushMatrix();                                      
+    glRenderMode(GL_SELECT);                             
+    glLoadIdentity();                                    
+    gluPickMatrix(x, viewport[3]-y, 2, 2, viewport);     
+    gluPerspective(45.0f,ratio,0.1f,100.0f);             
+    glMatrixMode(GL_MODELVIEW);                          
+    glLoadIdentity();                                    
+    DrawGLScene();                                       
+    hits = glRenderMode(GL_RENDER);                      
+    if(hits>0) ProcessSelect(selectBuff);                
+    glMatrixMode(GL_PROJECTION);                         
+    glPopMatrix();                                       
+    glMatrixMode(GL_MODELVIEW);                          
+}
+*/
+void SelectObjects(GLint x, GLint y) 
+{ 
+    GLuint selectBuff[64];                               
+    GLint hits, viewport[4];                             
+      
+    glSelectBuffer(64, selectBuff);                      
+    glGetIntegerv(GL_VIEWPORT, viewport);                
+    glMatrixMode(GL_PROJECTION);                         
+    glPushMatrix();                                      
+    glRenderMode(GL_SELECT);                             
+    glLoadIdentity();                                    
+    gluPickMatrix(x, viewport[3]-y, 2, 2, viewport);
+    float aspect = double(window_width)/double(window_height); 
+    gluPerspective(45.0f,aspect,0.1f,100.0f);             
+    glMatrixMode(GL_MODELVIEW);                          
+    glLoadIdentity();                                    
+    drawSceneGraphics();                                       
+    hits = glRenderMode(GL_RENDER);                      
+    //if(hits>0) ProcessSelect(selectBuff);                
+    glMatrixMode(GL_PROJECTION);                         
+    glPopMatrix();                                       
+    glMatrixMode(GL_MODELVIEW);                          
+}
+
+void camera(){
+    /*
+    float aspect = double(window_width)/double(window_height); 
+    float near_height = 1.0;
+    float zNear = 0.1;
+    float zFar = 2.0;
+    float near_distance = 0.1;
+    int BUF_SIZE = 1000;
+    int mouse_y = yi;
+    int mouse_x = xi;
+    glMatrixMode( GL_PROJECTION ); 
+    glLoadIdentity(); 
+    glFrustum(-near_height * aspect, near_height * aspect, -near_height, near_height, zNear, zFar);
+    
+    int window_y = (window_height - mouse_y) - window_height/2; 
+    double norm_y = double(window_y)/double(window_height/2); 
+    int window_x = mouse_x - window_width/2; 
+    double norm_x = double(window_x)/double(window_width/2);
+    
+    float y = near_height * norm_y; 
+    float x = near_height * aspect * norm_x;
+    
+    float ray_pnt[4] = {0.f, 0.f, 0.f, 1.f}; 
+    float ray_vec[4] = {x, y, -near_distance, 0.f};
+    
+    GLuint buffer[BUF_SIZE]; 
+    glSelectBuffer (BUF_SIZE, buffer);
+    
+    GLint hits; 
+    glRenderMode(GL_SELECT); 
+    // ...render as usual... 
+    hits = glRenderMode(GL_RENDER);
+    */
     
     glTranslatef(0,0,-zoom);
     glTranslatef(-xpos, -ypos, -zpos);
