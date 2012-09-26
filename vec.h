@@ -3,6 +3,33 @@
 
 #include <iostream>
 
+class Vec2{
+    public:
+    union {
+        float n[2];
+        struct{ float x,y; };
+    };
+    
+    Vec2();
+    Vec2( const float a, const float b );
+    Vec2( const Vec2& v );
+    Vec2& operator=( const Vec2& v );
+    float& operator []( int i );
+    float operator []( int i ) const;
+    bool equals(const Vec2& v);
+    void zero();
+    
+    Vec2 operator-( const Vec2& v ) const;
+    Vec2 operator+( const Vec2& v ) const;
+    Vec2& operator+=( const Vec2& v );
+    Vec2& operator-=( const Vec2& v );
+    Vec2& operator*=( const float m );
+    Vec2& operator/=( const float d );
+    
+    double length2() const;
+    double length() const;
+};
+
 class Vec3{
     public:
     union {
@@ -11,21 +38,25 @@ class Vec3{
     };
     
     Vec3();
-	Vec3( const float a, const float b, const float c );
-	Vec3( const Vec3& v );
-	Vec3& operator=( const Vec3& v );
-	float& operator []( int i );
-	float operator []( int i ) const;
+    Vec3( const float a, const float b, const float c );
+    Vec3( const Vec3& v );
+    Vec3& operator=( const Vec3& v );
+    float& operator []( int i );
+    float operator []( int i ) const;
     bool equals(const Vec3& v);
+    void zero();
+    
     Vec3 operator-( const Vec3& v ) const;
-	Vec3 operator+( const Vec3& v ) const;
-	Vec3& operator+=( const Vec3& v );
-	Vec3& operator-=( const Vec3& v );
+    Vec3 operator+( const Vec3& v ) const;
+    Vec3& operator+=( const Vec3& v );
+    Vec3& operator-=( const Vec3& v );
+    Vec3 operator/( const float d );
+    Vec3 operator*( const float m ) const;
     Vec3& operator*=( const float m );
     Vec3& operator/=( const float d );
-	//const float* getPointer() const;
-	double length2() const;
-	double length() const;
+    //const float* getPointer() const;
+    double length2() const;
+    double length() const;
     Vec3 normalize();
     Vec3 normalized() const;
     float dot( const Vec3& v ) const;
@@ -33,17 +64,15 @@ class Vec3{
     float operator*( const Vec3& v ) const;
     Vec3 operator^( const Vec3& v ) const;
     float angle( const Vec3& v ) const;
-    Vec3 operator/( const float d );
-    Vec3 operator*( const float m ) const;
-    void setValue( const float a, const float b, const float c );
-    void setValue( const Vec3& v );
+    void set( const float a, const float b, const float c );
+    void set( const Vec3& v );
     Vec3 min(const Vec3& a, const Vec3& b);
-	Vec3 max(const Vec3& a, const Vec3& b);
-	float min() const;
-	float max() const;
-	void rotateX(float t);
-	void rotateY(float t);
-	void rotateZ(float t);
+    Vec3 max(const Vec3& a, const Vec3& b);
+    float min() const;
+    float max() const;
+    void rotateX(float t);
+    void rotateY(float t);
+    void rotateZ(float t);
 };
 
 Vec3 operator*(const float& s, const Vec3& v);

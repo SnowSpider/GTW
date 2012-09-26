@@ -13,8 +13,8 @@
 #include <stdio.h>
 
 #include "planet.h"
-#include "quaternion.h"
-//#include "camera.h"
+#include "quat.h"
+#include <math.h>
 
 using namespace std;
 
@@ -32,8 +32,18 @@ int k = 0;
 Planet myPlanet(center, axis, longitude_zero, radius, k);
 
 Vec3 cameraPosition;
-Quaternion currentQuat(0.0f, 0.0f, 0.0f, 1.0f);
-Quaternion lastQuat(0.0f, 0.0f, 0.0f, 1.0f);
+Mat4 identity(1,0,0,0,
+              0,1,0,0,
+              0,0,1,0,
+              0,0,0,1);
+Mat4 rotation = identity;
+Mat4 viewMatrix;
+Mat4 modelMatrix;
+
+Quat lastQuat;
+Quat rotQuat;
+Quat curQuat;
+
 const float PIOVER180 = 3.14159265/180.f;
 
 // Debugging flags
@@ -41,9 +51,16 @@ bool drawPlanet = true;
 bool drawWireframe = true;
 bool drawAxis = true;
 
-float zoom = 0.0;
-float rotX = 0.0; // scroll up/down
-float rotY = 0.0; // scroll left/right
+float xi, yi;
+bool leftButtonDown = false;
+bool middleButtonDown = false;
+bool rightButtonDown = false;
+
+float zoom = 0.0; // distance from the planet center
+float rotX = 0.0; // angle offset, up/down
+float rotY = 0.0; // angle offset, left/right
+float shiftX = 0.0;
+float shiftY = 0.0;
 
 void initGL();
 void buildPlanet();
@@ -59,15 +76,41 @@ void mouseButton(int button, int state, int x, int y);
 void mouseMotion(int x, int y);
 void idle();
 
-void initGL(){
-    glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_COLOR_MATERIAL);
+float z(float x, float y){
+    float x2 = x*x;
+    float y2 = y*y;
+    float r2 = radius*radius;
+    if(x2 + y2 <= r2 * 0.5){
+        return sqrt( r2 - (x2 + y2) );
+    }
+    else{
+        return r2 * 0.5 / sqrt(x2 + y2);
+    }
 }
 
-void buildPlanet(){
+Vec3 trackballProject(float x, float y){
+    x = x - window_width * 0.5 - center[0];
+    y = y - window_height * 0.5 - center[1];
+    return Vec3(x, y, z(x,y)).normalized();
+}
+
+void trackballRotate(float x1, float y1, float x2, float y2){
+    Vec3 v1 = trackballProject(x1, y1);
+    Vec3 v2 = trackballProject(x2, y2);
+    Vec3 normal = v1 ^ v2;
+    float theta = acos(v1*v2);
+    rotQuat.fromAxis(normal, theta);
+    curQuat = lastQuat * rotQuat;
+    lastQuat = curQuat;
+}
+
+void initGL(){
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_COLOR_MATERIAL);
+    
     static const GLfloat light_model_ambient[] = {0.3f, 0.3f, 0.3f, 1.0f};
     static const GLfloat light0_diffuse[] = {0.9f, 0.9f, 0.9f, 0.9f};   
     static const GLfloat light0_direction[] = {1.0f, 1.0f, 1.4f, 0.0f};    
@@ -92,42 +135,32 @@ void buildPlanet(){
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
     glLightfv(GL_LIGHT0, GL_POSITION, light0_direction);
     glEnable(GL_LIGHT0);
-    
+}
+
+void buildPlanet(){
     myPlanet.init();
 }
 
 void drawScene(){
-    /*
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(52.0f, window_aspect, 0.2f, 255.0f);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -4.0f);
-    */
-    
-    Mat4 translation(1, 0, 0, 0,
-                     0, 1, 0, 0,
-                     0, 0, 1, 0,
-                     0, 0, 0, 0);
-    
-    
-    glTranslatef(0,0,-zoom);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    
-    //glTranslatef(0,0,-zoom);
-    
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-    //glTranslatef(0,0,-4.0f);
-    glPushMatrix();
     
     if(drawAxis) myPlanet.renderAxis();
     if(drawPlanet) myPlanet.renderEarth();
     
-    glPopMatrix();
-    
     glFlush();
-    
+}
+
+void drawRotatedScene(){
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix(); { // prevents rotation after releasing mouse button
+        glMultMatrixf((GLfloat*)curQuat.getMatrix().mat);
+        drawScene();
+    } glPopMatrix();
+}
+
+void display(){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawRotatedScene();
     glutSwapBuffers();
 }
 
@@ -141,41 +174,11 @@ void resize(int w, int h){
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
+    
     gluLookAt(0, 0, 2.4 + 1.0,
               0, 0, 0,
               0, 1, 0);
-}
-
-void translateX(float offset){
     
-}
-
-void translateY(float offset){
-    
-}
-
-void translateZ(float offset){
-    zoom += offset;
-    
-}
-
-void rotateX(float offset){
-    
-}
-
-void rotateY(float offset){
-    
-}
-
-void rotateZ(float offset){
-    
-}
-
-void euler(float pitch, float yaw, float roll){
-    Quaternion qroll(sin(roll/2.0), 0, 0, cos(roll/2.0));
-    Quaternion qpitch(0, sin(pitch/2.0), 0, cos(pitch/2.0));
-    Quaternion qyaw(0, 0, sin(yaw/2.0), cos(yaw/2.0));
-    rotation = qroll * qpitch * qyaw;
 }
 
 void handleKeyPress(unsigned char key, int x, int y){
@@ -196,25 +199,15 @@ void handleKeyPress(unsigned char key, int x, int y){
             break;
         case 'w':
             rotX += 0.05;
-            euler(rotX, rotY, 0.0);
             break;
         case 's':
             rotX -= 0.05;
-            euler(rotX, rotY, 0.0);
             break;
         case 'a'://GLUT_KEY_LEFT:
             rotY += 0.05;
-            euler(rotX, rotY, 0.0);
             break;
         case 'd'://GLUT_KEY_RIGHT:
             rotY -= 0.05;
-            euler(rotX, rotY, 0.0);
-            break;
-        case ',':
-            translateZ(0.1);
-            break;
-        case '.':
-            translateZ(-0.1);
             break;
         case 'f':
             if(drawWireframe) drawWireframe = false;
@@ -234,46 +227,85 @@ void handleKeyPress(unsigned char key, int x, int y){
     glutPostRedisplay();
 }
 
+void mouseButton(int button, int state, int x, int y){
+    y = window_height - y;
+    
+    if(button == GLUT_LEFT_BUTTON){ // orbitCam
+        if(state == GLUT_UP){
+            leftButtonDown = false; 
+            xi = -1;
+            yi = -1;
+        }
+        else{
+            leftButtonDown = true; 
+            xi = x;
+            yi = y;
+        }
+    }
+    if(button == GLUT_MIDDLE_BUTTON){ // panObj
+        if(state == GLUT_UP){
+            middleButtonDown = false;
+            xi = -1;
+            yi = -1;
+        } 
+        else{
+            middleButtonDown = true;
+            xi = x;
+            yi = y;
+        }
+    }
+    if(button == GLUT_RIGHT_BUTTON){ // zoom
+        if(state == GLUT_UP){
+            rightButtonDown = false;
+            xi = -1;
+            yi = -1;
+        } 
+        else{
+            rightButtonDown = true;
+            xi = x;
+            yi = y;
+        }
+    }
+    
+    glutPostRedisplay(); // let glut know to redraw the screen
+}
+
+void mouseMotion(int x, int y){
+    y = window_height - y;
+    
+    if(leftButtonDown){
+        trackballRotate(xi, yi, x, y);
+        
+        float deltaX = x - xi;
+        float deltaY = y - yi;
+        rotY += (deltaX * 0.1);
+        rotX += (deltaY * 0.1);
+        xi = x;
+        yi = y;
+    }
+    
+    if(middleButtonDown){
+        float deltaX = x - xi;
+        float deltaY = y - yi;
+        shiftX += (deltaX * 0.1);
+        shiftY += (deltaY * 0.1);
+        xi = x;
+        yi = y;
+    }
+    
+    if(rightButtonDown){
+        float deltaY = y - yi;
+        zoom += (deltaY * 0.1);
+        yi = y;
+    }
+    
+
+    glutPostRedisplay(); // let glut know to redraw the screen
+}
+
 void idle(){
     glutPostRedisplay();
 }
-
-/*
-    GLUT callback functions
-    Camera
-    Quaternion
-    Keyboard control
-    Mouse control
-    Selection
-    Consistent winding direction
-    Buildings & units
-    Command & control GUI
-    In-game menu
-    Wind & current map
-    Precipitation map
-    Vegitation map
-    Temperature map
-    Population density map
-    Procedurally generated clouds
-    Ballistics
-    Collision detection
-    Explosion: animated sprites & particles
-    Mushroom cloud
-    Day & night
-    Sun & Moon
-    Atmosphere
-    Pathfinding (A*)
-    Skybox with stars
-    Flight mechanics
-    Framerate counter
-    Sound effects
-    Music
-    Cinematics
-    AI
-    Multiplayer game (shared machine)
-    Online game
-    
-*/
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
@@ -282,17 +314,17 @@ int main(int argc, char** argv) {
     glutInitWindowSize(window_width, window_height);
     
     glutCreateWindow("Global Thermonuclear War");
+    //scene_spin_context.setWindow(scene_window, scene_animate);
     
     initGL();
     buildPlanet();
-    
-    // Set glut callback functions.
-    glutDisplayFunc(drawScene);
-    glutReshapeFunc(resize);
-    glutIdleFunc(idle);
+
+    glutDisplayFunc(display);
     glutKeyboardFunc(handleKeyPress);
-    //glutMouseFunc(mouseButton);
-	//glutMotionFunc(mouseMotion);
+    glutReshapeFunc(resize);
+    glutMouseFunc(mouseButton);
+    glutMotionFunc(mouseMotion);
+    glutIdleFunc(idle);
     
     glutMainLoop();
     return 0;

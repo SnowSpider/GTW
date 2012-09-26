@@ -4,6 +4,78 @@
 
 using namespace std;
 
+Vec2::Vec2(){
+    x = 0.0; 
+    y = 0.0; 
+}
+Vec2::Vec2( const float a, const float b ){
+    x = a; 
+    y = b; 
+}
+Vec2::Vec2( const Vec2& v ){
+    x = v.x; 
+    y = v.y; 
+}
+Vec2& Vec2::operator=( const Vec2& v ){
+    x = v.x; 
+    y = v.y; 
+}
+float& Vec2::operator []( int i ){
+    return n[i];
+}
+float Vec2::operator []( int i ) const {
+    return n[i];
+}
+bool Vec2::equals(const Vec2& v){
+    if(x==v.x && y==v.y) return true;
+    else return false;
+}
+void Vec2::zero(){
+    x = 0.0;
+    y = 0.0;
+}
+
+Vec2 Vec2::operator-( const Vec2& v ) const {
+    return Vec2(x-v.x, y-v.y); 
+}
+
+Vec2 Vec2::operator+( const Vec2& v ) const {
+    return Vec2(x+v.x, y+v.y); 
+}
+
+Vec2& Vec2::operator+=( const Vec2& v ){
+    x += v.x;
+    y += v.y;
+    return *this;
+}
+
+Vec2& Vec2::operator-=( const Vec2& v ){
+    x -= v.x;
+    y -= v.y;
+    return *this;
+}
+
+Vec2& Vec2::operator*=( const float m ){
+    x *= m;
+    y *= m;
+    return *this;
+}
+
+Vec2& Vec2::operator/=( const float d ){
+    x /= d;
+    y /= d;
+    return *this;
+}
+
+double Vec2::length2() const { 
+    return x*x + y*y;
+}
+    
+double Vec2::length() const { 
+    return sqrt( length2() );
+}
+
+
 Vec3::Vec3(){ 
     x = 0.0; 
     y = 0.0; 
@@ -37,13 +109,19 @@ bool Vec3::equals(const Vec3& v) {
     if(x==v.x && y==v.y && z==v.z) return true;
     else return false;
 }
+
+void Vec3::zero(){
+    x = 0.0;
+    y = 0.0;
+    z = 0.0;
+}
     
 Vec3 Vec3::operator-( const Vec3& v ) const { 
     return Vec3(x-v.x, y-v.y, z-v.z); 
 }
     
 Vec3 Vec3::operator+( const Vec3& v ) const { 
-    return Vec3(v.x+x, v.y+y, v.z+z); 
+    return Vec3(x+v.x, y+v.y, z+v.z); 
 }
 
 Vec3& Vec3::operator+=( const Vec3& v ){
@@ -58,6 +136,22 @@ Vec3& Vec3::operator-=( const Vec3& v ){
     y -= v.y;
     z -= v.z;
     return *this;
+}
+
+Vec3 Vec3::operator/( const float d ) {
+    Vec3 ret;
+    ret.x = x/d;
+    ret.y = y/d;
+    ret.z = z/d;
+    return ret;
+}
+    
+Vec3 Vec3::operator*( const float m ) const {
+    Vec3 ret;
+    ret.x = x*m;
+    ret.y = y*m;
+    ret.z = z*m;
+    return ret;
 }
 
 Vec3& Vec3::operator*=( const float m ){
@@ -128,29 +222,13 @@ float Vec3::angle( const Vec3& v ) const {
     return acos(dot(v) / s); //expressed in radians
 }
     
-Vec3 Vec3::operator/( const float d ) {
-    Vec3 ret;
-    ret.x = x/d;
-    ret.y = y/d;
-    ret.z = z/d;
-    return ret;
-}
-    
-Vec3 Vec3::operator*( const float m ) const {
-    Vec3 ret;
-    ret.x = x*m;
-    ret.y = y*m;
-    ret.z = z*m;
-    return ret;
-}
-    
-void Vec3::setValue( const float a, const float b, const float c ){
+void Vec3::set( const float a, const float b, const float c ){
     x = a; 
     y = b; 
     z = c;
 }
     
-void Vec3::setValue( const Vec3& v ){ 
+void Vec3::set( const Vec3& v ){ 
     x = v.x; 
     y = v.y; 
     z = v.z;
@@ -244,8 +322,8 @@ Vec3 midpoint (Vec3& a, Vec3& b, Vec3& c){
 }
 
 ostream &operator<<(ostream &output, const Vec3 &v) {
-	cout << '(' << v[0] << ", " << v[1] << ", " << v[2] << ')';
-	return output;
+    cout << '(' << v[0] << ", " << v[1] << ", " << v[2] << ')';
+    return output;
 }
 
 Vec4::Vec4(float a, float b, float c, float d){
