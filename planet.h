@@ -60,14 +60,14 @@ class PlanetVertex: public Vec3{
     }
         
     PlanetVertex( const PlanetVertex& v ){
-        id = -1;
+        id = v.id; //critical
         n[0] = v[0]; 
         n[1] = v[1]; 
         n[2] = v[2];
     }
         
     PlanetVertex& operator=( const PlanetVertex& v ){
-        id = v.id;
+        id = v.id; //critical
         n[0] = v[0]; 
         n[1] = v[1]; 
         n[2] = v[2];
@@ -75,6 +75,11 @@ class PlanetVertex: public Vec3{
         longitude = v.longitude;
         latitude = v.latitude;
         return *this;
+    }
+    
+    bool equals(const PlanetVertex& v) {
+        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2]) return true;
+        else return false;
     }
 };
 

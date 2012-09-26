@@ -108,10 +108,42 @@ void Planet::init(){
 void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k){
     if(_k==0){
         
+        /*
+        bool aIsUnique = true;
+        bool bIsUnique = true;
+        bool cIsUnique = true;
+        
+        PlanetVertex* tempA = &a;
+        PlanetVertex* tempB = &b;
+        PlanetVertex* tempC = &c;
+        
+        for(int i=0;i<vertices.size();i++){
+            if(vertices[i].equals(a)){
+                tempA = &vertices[i];
+                aIsUnique = false;
+                break;
+            }
+            if(vertices[i].equals(b)){
+                tempB = &vertices[i];
+                bIsUnique = false;
+                break;
+            }
+            if(vertices[i].equals(c)){
+                tempC = &vertices[i];
+                cIsUnique = false;
+                break;
+            }
+        }
+        
+        if(aIsUnique) vertices.add(*tempA);
+        if(bIsUnique) vertices.add(*tempB); 
+        if(cIsUnique) vertices.add(*tempC);
+        */
+        /*
         vertices.add(a);
         vertices.add(b); 
         vertices.add(c);
-        
+        */
         /*
         a.neighbors.push_back(b.id);
         a.neighbors.push_back(c.id);
@@ -122,6 +154,9 @@ void Planet::subdivide(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c, int _k
         */
         
         PlanetFace tempFace(a, b, c);
+        cout << "tempFace: " << "v" << a.id << "," 
+                             << "v" << b.id << ","
+                             << "v" << c.id << endl;
         
         faces._faces.push_back(tempFace);
 		//nf++;
@@ -178,15 +213,16 @@ void Planet::mapFace(PlanetVertex& a, PlanetVertex& b, PlanetVertex& c){
 	U x V = Ux*Vy-Uy*Vx
 	http://howevangotburned.wordpress.com/2011/02/28/the-oddyssey-of-texturing-a-geodesic-dome/
 	*/
-	if((cLongitude*bLatitude-cLatitude*bLongitude)+
-		(bLongitude*aLatitude-bLatitude*aLongitude)+
-		(aLongitude*cLatitude-aLatitude*cLongitude)<0){
+	
+	if( (cLongitude*bLatitude-cLatitude*bLongitude) +
+		(bLongitude*aLatitude-bLatitude*aLongitude) +
+		(aLongitude*cLatitude-aLatitude*cLongitude) < 0 ){
 		//glColor3f(1.0,0.0,0.0); //identify the reversed triangles
 		if(c[0]<=0) cLongitude++;
 		if(b[0]<=0) bLongitude++;
 		if(a[0]<=0) aLongitude++;
 	}
-
+	
 	// terrain mapping 
 
 	/*
@@ -246,12 +282,14 @@ PlanetVertex Planet::midpointOnSphere (PlanetVertex& a, PlanetVertex& b){
 	unitRadial.normalize();
 	PlanetVertex midPointOnSphere = center + (unitRadial * radius);
 	
-	/*
+	
 	for(int i=0;i<vertices.size();i++){
-	    if(vertices[i].equals(midPointOnSphere)) return vertices[i];
+	    if(vertices[i].equals(midPointOnSphere)){
+	        return vertices[i];
+	    }
 	}
+	
 	vertices.add(midPointOnSphere);
-	*/
 	
 	return midPointOnSphere;
 }
