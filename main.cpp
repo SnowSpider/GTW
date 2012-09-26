@@ -57,7 +57,8 @@ bool drawPlanet = true;
 bool drawWireframe = false;
 bool drawAxis = true;
 bool drawCell = false;
-bool drawBoundingBox = true;
+bool drawTempCell = false;
+bool drawBoundingBox = false;
 bool drawSkybox = true;
 
 float xi, yi;
@@ -74,6 +75,7 @@ Vec3 cursorDir;
 
 size_t cursorCellId = 0;
 
+Vec3 cursorRadial_selected;
 Vec3 cursorRadial;
 
 unsigned int PickBuffer[PICK_BUFFER_SIZE]; // picking buffer
@@ -82,7 +84,13 @@ size_t selectionCounter = 0;
 bool siloSelected = false;
 bool targetSelected = false;
 
+float spin = 0.2 * PIOVER180;
+bool worldSpins = true;
+
 void initGL();
+void viewOrtho(int x, int y);
+void ViewPerspective(void);
+void renderButtons();
 void renderBoundingBox();
 void renderSkybox();
 void buildPlanet();
@@ -105,6 +113,7 @@ void getGLPosDir(int x, int y, Vec3& rayPos, Vec3& rayDir);
 void motionUpdate();
 void mouseButton(int button, int state, int x, int y);
 void mouseMotion(int x, int y);
+void passiveMotion(int x, int y);
 void idle();
 
 void initGL(){
@@ -141,6 +150,91 @@ void initGL(){
     
     // GL selection buffer.
     glSelectBuffer( PICK_BUFFER_SIZE, PickBuffer );
+}
+
+void viewOrtho(int x, int y){							// Set Up An Ortho View
+	glMatrixMode(GL_PROJECTION);					// Select Projection
+	glPushMatrix();							// Push The Matrix
+	glLoadIdentity();						// Reset The Matrix
+	glOrtho( 0, x , y , 0, -1, 1 );				// Select Ortho Mode
+	glMatrixMode(GL_MODELVIEW);					// Select Modelview Matrix
+	glPushMatrix();							// Push The Matrix
+	glLoadIdentity();						// Reset The Matrix
+}
+
+void viewPerspective(void){							// Set Up A Perspective View
+	glMatrixMode( GL_PROJECTION );					// Select Projection
+	glPopMatrix();							// Pop The Matrix
+	glMatrixMode( GL_MODELVIEW );					// Select Modelview
+	glPopMatrix();							// Pop The Matrix
+}
+
+void renderButtons(){
+    glDisable(GL_LIGHTING);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0.0, window_width, window_height, 0.0, -1.0, 10.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glDisable(GL_CULL_FACE);
+
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    Image* image;
+    image = loadBMP("data/texture/button/exit.bmp");
+    GLuint buttonTexId = loadTexture(image);
+    delete image;
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, buttonTexId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    glBegin(GL_QUADS);
+        // Red Button
+        //glColor3f(1.0f, 0.0f, 0.0);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0, 1);
+        glVertex2f(10.0, 10.0);
+        glTexCoord2f(1, 1);
+        glVertex2f(90.0, 10.0);
+        glTexCoord2f(1, 0);
+        glVertex2f(90.0, 90.0);
+        glTexCoord2f(0, 0);
+        glVertex2f(10.0, 90.0);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+    
+    // Making sure we can render 3d again
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_LIGHTING);
+    
+    /*
+    glDisable(GL_LIGHTING);
+    glBegin(GL_QUADS);
+        // Red Button
+        glColor3f(1, 0, 0);
+        glVertex3f();
+        glVertex3f();
+        glVertex3f();
+        glVertex3f();
+        // Green Button
+        glColor3f(0, 1, 0);
+        glVertex3f();
+        glVertex3f();
+        glVertex3f();
+        glVertex3f();
+        // Blue Button
+        glColor3f(0, 0, 1);
+        glVertex3f();
+        glVertex3f();
+        glVertex3f();
+        glVertex3f();
+    glEnd();
+    glEnable(GL_LIGHTING);
+    */
 }
 
 void renderBoundingBox(){
@@ -240,13 +334,22 @@ void drawScene(void){
     glTranslatef(0.0f, 0.0f, -3.0f); // Move Into The Screen 3.0
     glTranslatef(0.0f, 0.0f, -zoom);
     
+    if(worldSpins){
+        Mat3 rotY(cos(spin), 0, sin(spin),
+                  0, 1, 0, 
+                  -sin(spin), 0, cos(spin));
+        curRot = curRot * rotY;
+        transform.setRot(curRot);
+    }
+    
     /*
-    glPointSize(5.0);
     glDisable(GL_LIGHTING);
+    glPointSize(5.0);
     glBegin(GL_POINTS);
         glColor3f(1, 0, 0);
         glVertex3f(cursorPos.x, -cursorPos.y, cursorPos.z);
     glEnd();
+    glPointSize(1.0);
     glEnable(GL_LIGHTING);
     */
     
@@ -261,7 +364,7 @@ void drawScene(void){
             myPlanet.renderEarth();
         }
         if(drawCell){
-            cursorCellId = myPlanet.getCellIdAt(cursorRadial);
+            cursorCellId = myPlanet.getCellIdAt(cursorRadial_selected);
             if(siloSelected) glColor3f(0.0,1.0,0.0);
             else if(targetSelected) glColor3f(1.0,0.0,0.0);
             glDisable(GL_LIGHTING);
@@ -272,6 +375,17 @@ void drawScene(void){
         }
         if(drawBoundingBox) renderBoundingBox();
         if(drawSkybox) renderSkybox();
+        if(drawTempCell){
+            cursorCellId = myPlanet.getCellIdAt(cursorRadial);
+            glColor3f(1.0,1.0,1.0);
+            glDisable(GL_LIGHTING);
+            glLineWidth( 3.0f );
+            myPlanet.renderCellBoundary(myPlanet.cells[cursorCellId]);
+            glLineWidth( 1.0f );
+            glEnable(GL_LIGHTING);
+        }
+        renderButtons();
+        
     glPopMatrix(); // Unapply Dynamic transform
     
     glFlush(); // Flush The GL Rendering Pipeline
@@ -283,12 +397,15 @@ void display(){
 }
 
 void resize(int w, int h){
+    window_width = w;
+    window_height = h;
     glViewport(0, 0, w, h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    myArcBall.setBounds((GLfloat)w, (GLfloat)h);
 }
 
 void handleKeyPress(unsigned char key, int x, int y){
@@ -330,6 +447,8 @@ void handleKeyPress(unsigned char key, int x, int y){
         case ' ': //#define SPACEBAR 32
             curQuat.clear();
             lastQuat.clear();
+            if(worldSpins) worldSpins = false;
+            else worldSpins = true;
             break;
         case ',':
             zoom -= 0.1;
@@ -456,9 +575,9 @@ void mouseButton(int button, int state, int x, int y){
             getGLPosDir(x, y, cursorPos, cursorDir);
             //cursorDir.x = cursorDir.x;
             //cursorDir.y = cursorDir.y;
-            if(myPlanet.rayHitPlanet(cursorPos, cursorDir, cursorRadial)){
-                cursorRadial.y = -cursorRadial.y;
-                cursorRadial = curRot*cursorRadial;
+            if(myPlanet.rayHitPlanet(cursorPos, cursorDir, cursorRadial_selected)){
+                cursorRadial_selected.y = -cursorRadial_selected.y;
+                cursorRadial_selected = curRot*cursorRadial_selected;
                 drawCell = true;
                 if(selectionCounter == 0){
                     selectionCounter = 1;
@@ -472,9 +591,9 @@ void mouseButton(int button, int state, int x, int y){
                 }
             }
             else{
-                //drawCell = false;
+                //drawCell = false; //deselect
             }
-            
+            drawTempCell = false;
         }
     }
     if(button == GLUT_MIDDLE_BUTTON){ // panObj
@@ -494,12 +613,13 @@ void mouseButton(int button, int state, int x, int y){
             rightButtonDown = false;
             xi = -1;
             yi = -1;
-        } 
+        }
         else{
             rightButtonDown = true;
             xi = x;
             yi = y;
         }
+        drawTempCell = false;
     }
     
     glutPostRedisplay();
@@ -540,10 +660,21 @@ void mouseMotion(int x, int y){
         //float newY = ((float)y * 2.0 / window_height) - 1.0;
         //cout << "newXY = (" << newX << "," << newY << ")" << endl;
         //cout << "zoom = " << zoom << endl;
-    }
-    
-    
+    }    
     glutPostRedisplay();
+}
+
+void passiveMotion(int x, int y){
+    y = window_height - y;
+    getGLPosDir(x, y, cursorPos, cursorDir);
+    if(myPlanet.rayHitPlanet(cursorPos, cursorDir, cursorRadial)){
+        cursorRadial.y = -cursorRadial.y;
+        cursorRadial = curRot*cursorRadial;
+        drawTempCell = true;
+    }
+    else{
+        drawTempCell = false;
+    }
 }
 
 void idle(){
@@ -566,6 +697,7 @@ int main(int argc, char** argv) {
     glutReshapeFunc(resize);
     glutMouseFunc(mouseButton);
     glutMotionFunc(mouseMotion);
+    glutPassiveMotionFunc(passiveMotion);
     glutIdleFunc(idle);
     
     glutMainLoop();

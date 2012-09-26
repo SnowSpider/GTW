@@ -30,7 +30,7 @@ void ArcBall::_mapToSphere(const Vec2& NewPt, Vec3& NewVec) const {
         GLfloat norm;
 
         //Compute a normalizing factor (radius / sqrt(length))
-        norm    = 1.0f / sqrt(length);
+        norm = 1.0f / sqrt(length);
 
         //Return the "normalized" vector, a point on the sphere
         NewVec.x = TempPt.x * norm;

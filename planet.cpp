@@ -1,16 +1,7 @@
-#ifdef __APPLE__
-#include <OpenGL/OpenGL.h>
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
-
 #include <cmath>
 #include <iostream>
 
 #include "planet.h"
-#include "imageloader.h"
-#include "vec.h"
 
 //Makes the image into a texture, and returns the id of the texture
 GLuint loadTexture(Image* image) {
@@ -40,7 +31,7 @@ void Planet::init(){
     // Load texture images
     Image* image;
     
-    image = loadBMP("data/texture/earth/earth_night.bmp");
+    image = loadBMP("data/texture/earth/earth_day.bmp");
     texId_day = loadTexture(image);
     
     image = loadBMP("data/texture/earth/earth_night.bmp");
@@ -540,6 +531,8 @@ PlanetCell& Planet::getCellAt( Vec3 p ){
 }
 
 size_t Planet::getCellIdAt( Vec3 p ){
+    // clever cheat -- just use the dot product to find the 
+	// smallest angle -- and thus the containing hex
     Vec3 targetRadial = p - center;
     float minAngle = 2 * PI;
     float currentAngle;

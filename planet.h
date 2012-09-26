@@ -1,13 +1,23 @@
 #ifndef __PLANET_H__
 #define __PLANET_H__
 
+#ifdef __APPLE__
+#include <OpenGL/OpenGL.h>
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
 #include <iostream>
 #include <vector>
 #include "vec.h"
+#include "imageloader.h"
 
 #define PI 3.1415926535897932384626433832795
 
 using namespace std;
+
+GLuint loadTexture(Image* image);
 
 class PlanetVertex: public Vec3{
     public:
