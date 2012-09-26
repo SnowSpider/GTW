@@ -6,11 +6,37 @@
 #endif
 
 #include "planet.h"
-#include "vec3.h"
+#include "imageloader.h"
+#include <iostream>
 
 using namespace std;
 
+GLuint sphereDL2;
+GLuint _textureId2; //The id of the texture
+
+//Makes the image into a texture, and returns the id of the texture
+GLuint loadTexture2(Image* image) {
+	GLuint textureId;
+	glGenTextures(1, &textureId); //Make room for our texture
+	glBindTexture(GL_TEXTURE_2D, textureId); //Tell OpenGL which texture to edit
+	//Map the image to the texture
+	glTexImage2D(GL_TEXTURE_2D,                //Always GL_TEXTURE_2D
+				 0,                            //0 for now
+				 GL_RGB,                       //Format OpenGL uses for image
+				 image->width, image->height,  //Width and height
+				 0,                            //The border of the image
+				 GL_RGB, //GL_RGB, because pixels are stored in RGB format
+				 GL_UNSIGNED_BYTE, //GL_UNSIGNED_BYTE, because pixels are stored
+				                   //as unsigned numbers
+				 image->pixels);               //The actual pixel data
+	return textureId; //Returns the id of the texture
+}
+
 void Planet::init(){
+    Image* image = loadBMP("earth.bmp");
+	_textureId2 = loadTexture2(image);
+	delete image;
+	
     //Initialize a platonic solid
     //Here we go with an Icosahedron
     //Icosahedron stats:
@@ -55,6 +81,9 @@ void Planet::init(){
 }
 
 void Planet::refine(){
+    cout << "k = " << k << endl;
+    sphereDL2 = glGenLists(1);
+	glNewList(sphereDL2,GL_COMPILE);
     subdivide (vertices[0], vertices[1], vertices[2], k);
 	subdivide (vertices[3], vertices[2], vertices[1], k);
 	subdivide (vertices[3], vertices[4], vertices[5], k);
@@ -75,27 +104,34 @@ void Planet::refine(){
 	subdivide (vertices[6], vertices[10], vertices[7], k);
 	subdivide (vertices[4], vertices[11], vertices[5], k);
 	subdivide (vertices[4], vertices[8], vertices[10], k);
+	glEndList();
 }
 
 void Planet::subdivide(const PlanetVertex& a, const PlanetVertex& b, const PlanetVertex& c, const int& _k){
-    if(k==0){
+    cout << "subdivide..." << endl;
+    if(_k==0){
+        cout << "k==0" << endl;
         // draw triangle
         PlanetFace tempFace(a, b, c);
-        faces[k].push_back(tempFace);
-		//drawFace (a, b, c);
+        cout << "tempFace constructed" << endl;
+        //faces[_k].push_back(tempFace);
+        faces.push_back(tempFace);
+        cout << "drawFace..." << endl;
+		drawFace (a, b, c);
 		//nf++;
     }
     else{
+        cout << "k!=0" << endl;
         // find edge midpoints
 		const PlanetVertex ab = midpointOnSphere (a, b);
 		const PlanetVertex bc = midpointOnSphere (b, c);
 		const PlanetVertex ca = midpointOnSphere (c, a);
 
-		// Create 4 sub-divided triangles an recurse
-		subdivide ( a, ab, ca, k-1);
-		subdivide (ab,  b, bc, k-1);
-		subdivide (ca, bc,  c, k-1);
-		subdivide (ab, bc, ca, k-1);
+		// Create 4 sub-divided triangles and recurse
+		subdivide ( a, ab, ca, _k-1);
+		subdivide (ab,  b, bc, _k-1);
+		subdivide (ca, bc,  c, _k-1);
+		subdivide (ab, bc, ca, _k-1);
     }
 }
 
@@ -105,7 +141,7 @@ void Planet::drawFace (const Vec3& a, const Vec3& b, const Vec3& c) {
 	Vec3 triNormal = triCenter - center; // face normal
 	
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, _textureId);
+	glBindTexture(GL_TEXTURE_2D, _textureId2);
 	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -189,8 +225,9 @@ Planet::PlanetVertex Planet::midpointOnSphere (const PlanetVertex& a, const  Pla
 }
 
 void Planet::render(){
-    
-    
+    cout << "render..." << endl;
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	glCallList(sphereDL2);
 }
 
 

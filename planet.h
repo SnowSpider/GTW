@@ -38,18 +38,17 @@ class Planet{
     bool overlayWireframe;
     GLuint _textureId;
     
-    Planet(Vec3 _center, Vec3 _axis, float _radius){
+    Planet(Vec3 _center, Vec3 _axis, float _radius, int _k){
         center = _center;
         axis = _axis;
         radius = _radius;
-        //k = _k;
+        k = _k;
         //nv = 0;
         //nf = 0;
         //ne = 0;
         //spinAngle = 0.0;
         longZero = Vec3(0, 0, 1);
         overlayWireframe = false;
-        
         
     }
     
@@ -106,7 +105,8 @@ class Planet{
         }
     };
     
-    vector< vector<PlanetFace> > faces; //faces_k
+    //vector< vector<PlanetFace> > faces; //faces_k
+    vector<PlanetFace> faces;
     
     void init();
     void refine();

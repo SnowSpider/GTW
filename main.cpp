@@ -14,22 +14,55 @@
 
 #include "btVector3.h"
 #include "imageloader.h"
-
-#include "vec3.h"
 #include "planet.h"
-
 
 using namespace std;
 
-//static const float pi = 6.283185307179586232/2.0;
+// Note: The planet spins around the Y axis.
+// The equator lies on the xz plane.
 
-// window parameters
-int window_width = 800, window_height = 600;
-float window_aspect = (float)window_width / (float)window_height;
+
+//2PI = 6.283185307179586232
+/*
+V = 10k^2 + 2
+F = 20k^2
+E = 30k^2
+where:
+V = the number of vertices
+F = the number of faces
+E = the number of edges
+k = frequency of subdivision
+*/
+
+int kay = 0;
+
+static int k = 0; //The frequency of subdivision
+static int nv = 12; //The number of vertices
+static int nf = 20; //The number of faces
+static int ne = 30; //The number of edges
+static const float pi = 6.283185307179586232/2.0;
 
 GLuint sphereDL;
 GLuint _textureId; //The id of the texture
+btVector3 center(0.0,0.0,0.0); //The center of the sphere
+btVector3 axis(0.0, 1.0, 0.0); //axis
+btVector3 longZero(0.0, 0.0, 1.0); //longitude zero
+static const float radius = 1.0; 
+static float maxEdgeLength = 1.0;
+float spinAngle = 0.0;
+static bool overlayWireframe = false;
 
+void getNeighbors (const btVector3& v);
+
+void drawTriangle (const btVector3& a,
+				   const btVector3& b,
+				   const btVector3& c);
+btVector3 midpointOnSphere (const btVector3& a,
+							const btVector3& b);
+void drawIcosahedron (const btVector3& a,
+					  const btVector3& b,
+					  const btVector3& c);
+void createGeodesicSphere();
 void initGL();
 void initScene();
 void drawSceneGraphics();
@@ -38,10 +71,222 @@ void glutIdle();
 void glutReshape(int width, int height);
 void exitHandler();
 
+//Draw a single triangle
+void drawTriangle (const btVector3& a,
+				   const btVector3& b,
+				   const btVector3& c) {
+	btVector3 triCenter = (a + b + c)/ 3.0f; //The center of the triangle
+
+	btVector3 triNormal = triCenter - center; //The normal vector of the triangle
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, _textureId);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //blocky texture mapping
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glColor3f(1.0f, 1.0f, 1.0f);
+	
+	glBegin(GL_TRIANGLES);
+		glNormal3d(triNormal[0], triNormal[1], triNormal[2]); //Normal for lighting
+
+		/*
+		unsigned char color = (unsigned char)terrain->pixels[3 * (latitude * terrain->width + longitude)];
+			float h = height * ((color / 255.0f) - 0.5f);
+		*/
+
+		btVector3 cw(c[0], 0.0, c[2]);
+		btScalar cLatitude;
+		cLatitude = c.angle(axis)/pi; //north-south
+		btScalar cLongitude;
+		if(c[0]>0) cLongitude = (2.0*pi - cw.angle(longZero))/pi/2.0; //east-west
+		else cLongitude = cw.angle(longZero)/pi/2.0;
+		if(!(cLongitude>=0&&cLongitude<=1)) cLongitude = 0.0; //longitude is -1.#IND00; yes, I know my solution is ugly.
+
+		btVector3 bw(b[0], 0.0, b[2]);
+		btScalar bLatitude;
+		bLatitude = b.angle(axis)/pi; 
+		btScalar bLongitude;
+		if(b[0]>0) bLongitude = (2.0*pi - bw.angle(longZero))/pi/2.0; 
+		else bLongitude = bw.angle(longZero)/pi/2.0; 
+		if(!(bLongitude>=0&&bLongitude<=1)) bLongitude = 0.0;
+		
+		btVector3 aw(a[0], 0.0, a[2]);
+		btScalar aLatitude;
+		aLatitude = a.angle(axis)/pi; 
+		btScalar aLongitude;
+		if(a[0]>0) aLongitude = (2.0*pi - aw.angle(longZero))/pi/2.0; 
+		else aLongitude = aw.angle(longZero)/pi/2.0;
+		if(!(aLongitude>=0&&aLongitude<=1)) aLongitude = 0.0;
+
+		/*
+		signed area = sum of 2-d cross product
+		U x V = Ux*Vy-Uy*Vx
+		http://howevangotburned.wordpress.com/2011/02/28/the-oddyssey-of-texturing-a-geodesic-dome/
+		*/
+		if((cLongitude*bLatitude-cLatitude*bLongitude)+
+			(bLongitude*aLatitude-bLatitude*aLongitude)+
+			(aLongitude*cLatitude-aLatitude*cLongitude)<0){
+			//glColor3f(1.0,0.0,0.0); //identify the reversed triangles
+			if(c[0]<=0) cLongitude++;
+			if(b[0]<=0) bLongitude++;
+			if(a[0]<=0) aLongitude++;
+		} 
+
+		// terrain mapping ()
+
+		/*
+		glTexCoord2f(cLongitude, cLatitude);
+		glVertex3d(c[0], c[1], c[2]); //Vertex c
+		glTexCoord2f(bLongitude, bLatitude);
+		glVertex3d(b[0], b[1], b[2]); //Vertex b
+		glTexCoord2f(aLongitude, aLatitude);
+		glVertex3d(a[0], a[1], a[2]); //Vertex a
+		*/
+		
+		glTexCoord2f(cLongitude, cLatitude);
+		glVertex3d(c[0], c[1], c[2]); //Vertex c
+		glTexCoord2f(bLongitude, bLatitude);
+		glVertex3d(b[0], b[1], b[2]); //Vertex b
+		glTexCoord2f(aLongitude, aLatitude);
+		glVertex3d(a[0], a[1], a[2]); //Vertex a
+		
+	glEnd();
+}
+
+//Project the mid-point of a triangle edge on the sphere
+btVector3 midpointOnSphere (const btVector3& a,const  btVector3& b) {
+	btVector3 midpoint = (a + b) * 0.5;
+	btVector3 unitRadial = midpoint - center;
+	unitRadial.normalize();
+	btVector3 midPointOnSphere = center + (unitRadial * radius);
+
+	return midPointOnSphere;
+}
+
+/*
+Draw each face of the Icosahedron
+If the length of the traingle edge is smaller than the max length specified
+	Draw the face as it is
+	OR
+	Subdivide each triangle in to four more and Recurse
+*/
+void drawIcosahedron (const btVector3& a,
+					  const btVector3& b,
+					  const btVector3& c) {
+	btVector3 edge1 = a - b;
+	btVector3 edge2 = b - c;
+	btVector3 edge3 = c - a;
+
+	float mag1 = edge1.length() ;
+	float mag2 = edge2.length();
+	float mag3 = edge3.length();
+	
+	// if all edges are short enough
+	if ((mag1 < maxEdgeLength) && (mag2 < maxEdgeLength) &&	(mag3 < maxEdgeLength))	{
+		// draw triangle
+		drawTriangle (a, b, c);
+		nf++;
+	}
+	else { // otherwise subdivide and recurse
+		// find edge midpoints
+		const btVector3 ab = midpointOnSphere (a, b);
+		const btVector3 bc = midpointOnSphere (b, c);
+		const btVector3 ca = midpointOnSphere (c, a);
+
+		// Create 4 sub-divided triangles an recurse
+		drawIcosahedron ( a, ab, ca);
+		drawIcosahedron (ab,  b, bc);
+		drawIcosahedron (ca, bc,  c);
+		drawIcosahedron (ab, bc, ca);
+	}
+}
+
+//Draw the Geodesic Sphere
+void createGeodesicSphere () {
+	//Initialize a platonic solid
+	//Here we go with an Icosahedron
+	//Icosahedron stats:
+	//Vertices: 12
+	//Edges: 30
+	//Faces: 20
+	//Edges per face: 3
+	//Edges shared per vertex: 5
+
+	//Edge length = golden ratio
+	const float sqrt5 = sqrt (5.0f);
+	const float phi = (1.0f + sqrt5) * 0.5f;
+	// Circumscribed radius
+	const float cRadius = sqrt (10.0f + (2.0f * sqrt5)) / (4.0f * phi);
+	//Now we define constants which will define our Icosahedron's vertices
+	double a = (radius / cRadius) * 0.5;
+	double b = (radius / cRadius) / (2.0f * phi);
+
+	
+	// Vertices of the Icosahedron: 
+	
+	/*
+	btVector3 v1 =  center +	btVector3( 0,  b, -a); 
+	btVector3 v2 =  center +	btVector3( b,  a,  0); //North pole
+	btVector3 v3 =  center +	btVector3(-b,  a,  0);
+	btVector3 v4 =  center +	btVector3( 0,  b,  a);
+	btVector3 v5 =  center +	btVector3( 0, -b,  a);
+	btVector3 v6 =  center +	btVector3(-a,  0,  b);
+	btVector3 v7 =  center +	btVector3( 0, -b, -a);
+	btVector3 v8 =  center +	btVector3( a,  0, -b);
+	btVector3 v9 =  center +	btVector3( a,  0,  b);
+	btVector3 v10=  center +	btVector3(-a,  0, -b);
+	btVector3 v11=  center +	btVector3( b, -a,  0);
+	btVector3 v12=  center +	btVector3(-b, -a,  0); //South pole
+	*/
+
+	//I need the 2 poles to be at the point where 5 triangles meet instead of 6.
+
+	btVector3 v1 =  center +	btVector3( 0,  b, -a); 
+	btVector3 v2 =  center +	btVector3( b,  a,  0); //North pole ( 0,  1,  0)
+	btVector3 v3 =  center +	btVector3(-b,  a,  0);
+	btVector3 v4 =  center +	btVector3( 0,  b,  a);
+	btVector3 v5 =  center +	btVector3( 0, -b,  a);
+	btVector3 v6 =  center +	btVector3(-a,  0,  b);
+	btVector3 v7 =  center +	btVector3( 0, -b, -a);
+	btVector3 v8 =  center +	btVector3( a,  0, -b);
+	btVector3 v9 =  center +	btVector3( a,  0,  b);
+	btVector3 v10=  center +	btVector3(-a,  0, -b);
+	btVector3 v11=  center +	btVector3( b, -a,  0);
+	btVector3 v12=  center +	btVector3(-b, -a,  0); //South pole ( 0, -1,  0)
+
+	sphereDL = glGenLists(1);
+
+	glNewList(sphereDL,GL_COMPILE);
+
+	// draw the icosahedron
+	drawIcosahedron (v1, v2, v3		);
+	drawIcosahedron (v4, v3, v2		);
+	drawIcosahedron (v4, v5, v6		);
+	drawIcosahedron (v4, v9, v5		);
+	drawIcosahedron (v1, v7, v8		);
+	drawIcosahedron (v1, v10, v7	);
+	drawIcosahedron (v5, v11, v12	);
+	drawIcosahedron (v7, v12, v11	); 
+	drawIcosahedron (v3, v6, v10	);
+	drawIcosahedron (v12, v10, v6	);
+	drawIcosahedron (v2, v8, v9		);
+	drawIcosahedron (v11, v9, v8	);
+	drawIcosahedron (v4, v6, v3		);
+	drawIcosahedron (v4, v2, v9		);
+	drawIcosahedron (v1, v3, v10	);
+	drawIcosahedron (v1, v8, v2		);
+	drawIcosahedron (v7, v10, v12	);
+	drawIcosahedron (v7, v11, v8	);
+	drawIcosahedron (v5, v12, v6	);
+	drawIcosahedron (v5, v9, v11	);
+
+	glEndList();
+}
+
 //Initializes the scene.  Handles initializing OpenGL stuff. 
 void initScene() {
 	initGL();
-	//createGeodesicSphere ();
+	createGeodesicSphere ();
 }
 
 //Sets up general OpenGL rendering properties: lights, depth buffering, etc.
@@ -81,15 +326,13 @@ void drawSceneGraphics() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);           
 
 	// Spin the sphere
-	//spinAngle += 0.6;
+	spinAngle += 0.6;
 
-    /*
 	const float sqrt5 = sqrt (5.0f);
 	const float phi = (1.0f + sqrt5) * 0.5f;
 	const float cRadius = sqrt (10.0f + (2.0f * sqrt5)) / (4.0f * phi);
 	double a = (radius / cRadius) * 0.5;
 	double b = (radius / cRadius) / (2.0f * phi);
-	*/
 	
 	// Draw the geodesic sphere
 	glPushMatrix();
@@ -100,11 +343,20 @@ void drawSceneGraphics() {
 	//glRotatef(spinAngle, b, a, 0.0); //Make sure that the wireframe spins at the same rate
 	//glRotatef(spinAngle, 0.0, 1.0, 0.0);
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	glCallList(sphereDL);
-	glPopMatrix();
+	//glCallList(sphereDL);
 	
+	
+	Planet myPlanet(Vec3(0,0,0), Vec3(0,1,0), 1.0, 3);
+	cout << "init..." << endl;
+	myPlanet.init();
+	cout << "refine..." << endl;
+	myPlanet.refine();
+	cout << "done." << endl;
+	myPlanet.render();
+	
+	
+	glPopMatrix();
 	// Draw the overlay wireframe
-	/*
 	if (overlayWireframe) {
 		glPushMatrix();
 		//glRotatef(30.0, 0, 0, 1);
@@ -122,7 +374,6 @@ void drawSceneGraphics() {
 		glPopAttrib();
 		glPopMatrix();
 	}
-	*/
 }
 
 //GLUT callback for redrawing the view.
@@ -174,34 +425,11 @@ void exitHandler() {
 
 void handleKeypress(unsigned char key, int x, int y) {
 	switch (key) {
+	    case '[': if(kay>0) kay--; break;
+	    case ']': if(kay<10) kay++; break;
 		case 27: //Escape key
 			exit(0);
 	}
-}
-
-void keyboard(unsigned char key, int x, int y)
-{
-	/*
-	   This function is called whenever the user hits letters or numbers
-	   on the keyboard.  The 'key' variable has the character the user hit,
-	   and x and y tell where the mouse was when it was hit.
-	 */
-
-	y = window_height - y;
-	
-	switch (key)
-	{
-	    case '-': break; // decrease terrain factor
-	    case '=': break; // increase terrain factor
-	    case '[': break; // increase k
-	    case ']': break; // decrease k
-		case 'q':
-		case 27: // esc
-			exit(0);
-			break;
-	}
-
-	glutPostRedisplay(); // let glut know to redraw the screen
 }
 
 //Makes the image into a texture, and returns the id of the texture
@@ -231,9 +459,11 @@ void initRendering() {
 	//glShadeModel(GL_SMOOTH);
 	
 	//Image* image = loadBMP("generic_terrain.bmp");
+	
 	Image* image = loadBMP("earth.bmp");
 	_textureId = loadTexture(image);
 	delete image;
+	
 }
 
 void handleResize(int w, int h) {
@@ -246,11 +476,11 @@ void handleResize(int w, int h) {
 int main(int argc, char** argv) {
 	btVector3 vectorA(1.0, 0.0, 0.0);
 	btVector3 vectorB(-1.0, -1.0, 0.0); 
-	//printf("Angle1 = %f\n", vectorA.angle(vectorB)/pi);
+	printf("Angle1 = %f\n", vectorA.angle(vectorB)/pi);
 
 	vectorA.setValue(1.0, 0.0, 0.0);
 	vectorB.setValue(0.0, 1.0, 0.0);
-	//printf("Angle2 = %f\n", vectorA.angle(vectorB)/pi);
+	printf("Angle2 = %f\n", vectorA.angle(vectorB)/pi);
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -260,7 +490,7 @@ int main(int argc, char** argv) {
 	
 	initRendering();
 	
-	//maxEdgeLength = 0.5; //Determines the maximum edge length
+	maxEdgeLength = 0.5; //Determines the maximum edge length
 	
 	// Set glut callback functions.
 	glutDisplayFunc(glutDisplay);
@@ -279,8 +509,7 @@ int main(int argc, char** argv) {
 	E = the number of edges
 	k = frequency of subdivision
 	*/
-	
-    /*
+
 	nv = nf/2+2;
 	ne = nf*3/2;
 
@@ -288,12 +517,12 @@ int main(int argc, char** argv) {
 	printf("nv = %d\n", nv);
 	printf("nf = %d\n", nf);
 	printf("ne = %d\n", ne);
-	*/
-	
+
 	// Provide a cleanup routine for handling application exit.
 	atexit(exitHandler);
 	
 	initScene();
+	
 	glutMainLoop();
 	return 0;
 }
