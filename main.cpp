@@ -136,8 +136,10 @@ float z(float x, float y){
 }
 
 Vec3 trackballProject(float x, float y){
-    x = x - window_width * 0.5 - center[0];
-    y = y - window_height * 0.5 - center[1];
+    x = (x * 2.0 / window_width) - 1.0;
+    y = (y * 2.0 / window_height) - 1.0;
+    //x = x - window_width * 0.5 - center[0];
+    //y = y - window_height * 0.5 - center[1];
     return Vec3(x, y, z(x,y)).normalized();
 }
 
@@ -196,8 +198,8 @@ void drawScene(void){
     glTranslatef(0.0f,0.0f,-6.0f); // Move Into The Screen 6.0
 
     glPushMatrix(); // NEW: Prepare Dynamic transform
- //glMultMatrixf((GLfloat*)curQuat.getMatrix().mat); // NEW: Apply Dynamic transform
-        glMultMatrixf(transform.M);    
+        glMultMatrixf((GLfloat*)curQuat.getMatrix().mat); // NEW: Apply Dynamic transform
+        //glMultMatrixf(transform.M);    
         if(drawAxis) myPlanet.renderAxis();
         if(drawPlanet){
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -270,7 +272,7 @@ void handleKeyPress(unsigned char key, int x, int y){
 }
 
 void mouseButton(int button, int state, int x, int y){
-    //y = window_height - y;
+    y = window_height - y;
     if(button == GLUT_LEFT_BUTTON){ // orbitCam
         if(state == GLUT_UP){
             leftButtonDown = false; 
@@ -314,10 +316,9 @@ void mouseButton(int button, int state, int x, int y){
 }
 
 void mouseMotion(int x, int y){
- //y = window_height - y;
-    
+    y = window_height - y;
     if(leftButtonDown){
- //trackballRotate(xi, yi, x, y);
+        trackballRotate(xi, yi, x, y);
         float deltaX = x - xi;
         float deltaY = y - yi;
         rotY += (deltaX * 0.1);
@@ -339,7 +340,6 @@ void mouseMotion(int x, int y){
              << "         |" << curRot.s.M02 << "\t" << curRot.s.M12 << "\t" <<curRot.s.M22 <<"\t|" << endl;
         */
     }
-    
     if(middleButtonDown){
         float deltaX = x - xi;
         float deltaY = y - yi;
@@ -348,14 +348,11 @@ void mouseMotion(int x, int y){
         xi = x;
         yi = y;
     }
-    
     if(rightButtonDown){
         float deltaY = y - yi;
         zoom += (deltaY * 0.1);
         yi = y;
     }
-    
-    
     glutPostRedisplay(); // let glut know to redraw the screen
 }
 
