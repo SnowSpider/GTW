@@ -33,6 +33,11 @@ class Vec3{
 	    return n[i]; 
 	}
     
+    bool equals(const Vec3& v) {
+        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2]) return true;
+        else return false;
+    }
+    
     Vec3 operator-( const Vec3& v ) const { 
         return Vec3(n[0]-v[0], n[1]-v[1], n[2]-v[2]); 
     }
@@ -75,7 +80,7 @@ class Vec3{
     }
     
     float operator*( const Vec3& v ) const {
-	    return n[0] * v[0] + n[1] * v[1] +n[2] * v[2];
+	    return n[0] * v[0] + n[1] * v[1] + n[2] * v[2];
     }
     
     Vec3 operator^( const Vec3& v ) const {
@@ -87,18 +92,7 @@ class Vec3{
     float angle( const Vec3& v ) const {
         float s = sqrt(length2() * v.length2());
 		//btFullAssert(s != btScalar(0.0));
-		/*
-		if(s == 0.0){
-		    cout << "n = (" << n[0] << ", "
-		                    << n[1] << ", "
-		                    << n[2] << ")" << endl;
-		    cout << "v = (" << v[0] << ", "
-		                    << v[1] << ", "
-		                    << v[2] << ")" << endl << endl;
-		    return 666;
-		}
-		*/
-		//exit(0);
+		//if(s == 0.0) cout << "s == 0" << endl;//exit(0);
 		return acos(dot(v) / s);
     }
     
