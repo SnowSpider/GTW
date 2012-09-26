@@ -19,6 +19,7 @@ Vec2::Vec2( const Vec2& v ){
 Vec2& Vec2::operator=( const Vec2& v ){
     x = v.x; 
     y = v.y; 
+    return *this; 
 }
 float& Vec2::operator []( int i ){
     return n[i];
@@ -35,12 +36,12 @@ void Vec2::clear(){
     y = 0.0;
 }
 
-Vec2 Vec2::operator-( const Vec2& v ) const {
-    return Vec2(x-v.x, y-v.y); 
-}
-
 Vec2 Vec2::operator+( const Vec2& v ) const {
     return Vec2(x+v.x, y+v.y); 
+}
+
+Vec2 Vec2::operator-( const Vec2& v ) const {
+    return Vec2(x-v.x, y-v.y); 
 }
 
 Vec2& Vec2::operator+=( const Vec2& v ){
@@ -53,6 +54,20 @@ Vec2& Vec2::operator-=( const Vec2& v ){
     x -= v.x;
     y -= v.y;
     return *this;
+}
+
+Vec2 Vec2::operator*( const float m ) const {
+    Vec2 ret;
+    ret.x = x*m;
+    ret.y = y*m;
+    return ret;
+}
+
+Vec2 Vec2::operator/( const float d ){
+    Vec2 ret;
+    ret.x = x/d;
+    ret.y = y/d;
+    return ret;
 }
 
 Vec2& Vec2::operator*=( const float m ){
@@ -95,6 +110,7 @@ Vec3& Vec3::operator=( const Vec3& v ){
     x = v.x; 
     y = v.y; 
     z = v.z;
+    return *this;
 }
 
 float& Vec3::operator []( int i ){ 
@@ -115,13 +131,13 @@ void Vec3::clear(){
     y = 0.0;
     z = 0.0;
 }
+
+Vec3 Vec3::operator+( const Vec3& v ) const { 
+    return Vec3(x+v.x, y+v.y, z+v.z); 
+}
     
 Vec3 Vec3::operator-( const Vec3& v ) const { 
     return Vec3(x-v.x, y-v.y, z-v.z); 
-}
-    
-Vec3 Vec3::operator+( const Vec3& v ) const { 
-    return Vec3(x+v.x, y+v.y, z+v.z); 
 }
 
 Vec3& Vec3::operator+=( const Vec3& v ){
@@ -137,20 +153,20 @@ Vec3& Vec3::operator-=( const Vec3& v ){
     z -= v.z;
     return *this;
 }
-
-Vec3 Vec3::operator/( const float d ) {
-    Vec3 ret;
-    ret.x = x/d;
-    ret.y = y/d;
-    ret.z = z/d;
-    return ret;
-}
     
 Vec3 Vec3::operator*( const float m ) const {
     Vec3 ret;
     ret.x = x*m;
     ret.y = y*m;
     ret.z = z*m;
+    return ret;
+}
+
+Vec3 Vec3::operator/( const float d ) {
+    Vec3 ret;
+    ret.x = x/d;
+    ret.y = y/d;
+    ret.z = z/d;
     return ret;
 }
 

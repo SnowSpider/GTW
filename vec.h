@@ -19,10 +19,12 @@ class Vec2{
     bool equals(const Vec2& v);
     void clear();
     
-    Vec2 operator-( const Vec2& v ) const;
     Vec2 operator+( const Vec2& v ) const;
+    Vec2 operator-( const Vec2& v ) const;
     Vec2& operator+=( const Vec2& v );
     Vec2& operator-=( const Vec2& v );
+    Vec2 operator*( const float m ) const;
+    Vec2 operator/( const float d );
     Vec2& operator*=( const float m );
     Vec2& operator/=( const float d );
     
@@ -46,12 +48,12 @@ class Vec3{
     bool equals(const Vec3& v);
     void clear();
     
-    Vec3 operator-( const Vec3& v ) const;
     Vec3 operator+( const Vec3& v ) const;
+    Vec3 operator-( const Vec3& v ) const;
     Vec3& operator+=( const Vec3& v );
     Vec3& operator-=( const Vec3& v );
-    Vec3 operator/( const float d );
     Vec3 operator*( const float m ) const;
+    Vec3 operator/( const float d );
     Vec3& operator*=( const float m );
     Vec3& operator/=( const float d );
     //const float* getPointer() const;

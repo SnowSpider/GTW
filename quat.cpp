@@ -6,8 +6,6 @@
 #endif
 
 #include "quat.h"
-#include "vec.h"
-#include "mat.h"
 #include <string.h>
 
 #define TOLERANCE 0.00001f
@@ -51,6 +49,7 @@ Quat& Quat::operator=( const Quat& q ){
     y = q.y;
     z = q.z;
     w = q.w;
+    return *this; 
 }
 bool Quat::operator==(const Quat& q) const {
     return memcmp(array, q.array, sizeof(float)*4)==0;
@@ -66,47 +65,47 @@ float Quat::operator []( int i ) const {
 // if the Quat is close enough to being unit-length. define TOLERANCE as something
 // small like 0.00001f to get accurate results
 void Quat::normalize() {
-	// Don't normalize if we don't have to
-	float mag2 = w * w + x * x + y * y + z * z;
-	if (fabs(mag2) > TOLERANCE && fabs(mag2 - 1.0f) > TOLERANCE) {
-		float mag = sqrt(mag2);
-		w /= mag;
-		x /= mag;
-		y /= mag;
-		z /= mag;
-	}
+    // Don't normalize if we don't have to
+    float mag2 = w * w + x * x + y * y + z * z;
+    if (fabs(mag2) > TOLERANCE && fabs(mag2 - 1.0f) > TOLERANCE) {
+        float mag = sqrt(mag2);
+        w /= mag;
+        x /= mag;
+        y /= mag;
+        z /= mag;
+    }
 }
 
 // We need to get the inverse of a Quat to properly apply a Quat-rotation to a vector
 // The conjugate of a Quat is the same as the inverse, as long as the Quat is unit-length
 Quat Quat::getConjugate() const {
-	return Quat(-x, -y, -z, w);
+    return Quat(-x, -y, -z, w);
 }
 
 // Multiplying q1 with q2 applies the rotation q2 to q1
 Quat Quat::operator* (const Quat &rq) const {
-	// the constructor takes its arguments as (x, y, z, w)
-	return Quat(w * rq.x + x * rq.w + y * rq.z - z * rq.y,
-	            w * rq.y + y * rq.w + z * rq.x - x * rq.z,
-	            w * rq.z + z * rq.w + x * rq.y - y * rq.x,
-	            w * rq.w - x * rq.x - y * rq.y - z * rq.z);
+    // the constructor takes its arguments as (x, y, z, w)
+    return Quat(w * rq.x + x * rq.w + y * rq.z - z * rq.y,
+                w * rq.y + y * rq.w + z * rq.x - x * rq.z,
+                w * rq.z + z * rq.w + x * rq.y - y * rq.x,
+                w * rq.w - x * rq.x - y * rq.y - z * rq.z);
 }
 
 // Multiplying a Quat q with a vector v applies the q-rotation to v
 Vec3 Quat::operator* (const Vec3 &vec) const {
-	Vec3 vn(vec);
-	vn.normalize();
+    Vec3 vn(vec);
+    vn.normalize();
  
-	Quat vecQuat, resQuat;
-	vecQuat.x = vn.x;
-	vecQuat.y = vn.y;
-	vecQuat.z = vn.z;
-	vecQuat.w = 0.0f;
+    Quat vecQuat, resQuat;
+    vecQuat.x = vn.x;
+    vecQuat.y = vn.y;
+    vecQuat.z = vn.z;
+    vecQuat.w = 0.0f;
  
-	resQuat = vecQuat * getConjugate();
-	resQuat = *this * resQuat;
+    resQuat = vecQuat * getConjugate();
+    resQuat = *this * resQuat;
  
-	return (Vec3(resQuat.x, resQuat.y, resQuat.z));
+    return (Vec3(resQuat.x, resQuat.y, resQuat.z));
 }
 
 Quat& Quat::operator* (const float m){
@@ -130,7 +129,7 @@ Quat Quat::operator^( const Quat& q ) const {
 }
 
 Quat Quat::operator+( const Quat& q ) const { 
-    return Quat(q.x+x, q.y+y, q.z+z, w); 
+    return Quat(x+q.x, y+q.y, z+q.z, w); 
 }
 
 Quat& Quat::operator+=( const Quat& q ){
@@ -142,42 +141,42 @@ Quat& Quat::operator+=( const Quat& q ){
 
 // Convert from Axis Angle
 void Quat::fromAxis(const Vec3 &v, float angle){
-	float sinAngle;
-	angle *= 0.5f;
-	Vec3 vn(v);
-	vn.normalize();
+    float sinAngle;
+    angle *= 0.5f;
+    Vec3 vn(v);
+    vn.normalize();
  
-	sinAngle = sin(angle);
+    sinAngle = sin(angle);
  
-	x = (vn.x * sinAngle);
-	y = (vn.y * sinAngle);
-	z = (vn.z * sinAngle);
-	w = cos(angle);
+    x = (vn.x * sinAngle);
+    y = (vn.y * sinAngle);
+    z = (vn.z * sinAngle);
+    w = cos(angle);
 }
 
 // Convert from Euler Angles
 void Quat::fromEuler(float pitch, float yaw, float roll){
-	// Basically we create 3 Quats, one for pitch, one for yaw, one for roll
-	// and multiply those together.
-	// the calculation below does the same, just shorter
+    // Basically we create 3 Quats, one for pitch, one for yaw, one for roll
+    // and multiply those together.
+    // the calculation below does the same, just shorter
  
-	float p = pitch * PIOVER180 / 2.0;
-	float y = yaw * PIOVER180 / 2.0;
-	float r = roll * PIOVER180 / 2.0;
+    float p = pitch * PIOVER180 / 2.0;
+    float y = yaw * PIOVER180 / 2.0;
+    float r = roll * PIOVER180 / 2.0;
  
-	float sinp = sin(p);
-	float siny = sin(y);
-	float sinr = sin(r);
-	float cosp = cos(p);
-	float cosy = cos(y);
-	float cosr = cos(r);
+    float sinp = sin(p);
+    float siny = sin(y);
+    float sinr = sin(r);
+    float cosp = cos(p);
+    float cosy = cos(y);
+    float cosr = cos(r);
  
-	this->x = sinr * cosp * cosy - cosr * sinp * siny;
-	this->y = cosr * sinp * cosy + sinr * cosp * siny;
-	this->z = cosr * cosp * siny - sinr * sinp * cosy;
-	this->w = cosr * cosp * cosy + sinr * sinp * siny;
+    this->x = sinr * cosp * cosy - cosr * sinp * siny;
+    this->y = cosr * sinp * cosy + sinr * cosp * siny;
+    this->z = cosr * cosp * siny - sinr * sinp * cosy;
+    this->w = cosr * cosp * cosy + sinr * sinp * siny;
  
-	normalize();
+    normalize();
 }
 
 // Convert from Matrix
@@ -220,34 +219,59 @@ void Quat::fromMatrix( const Mat4& m ){
     }
 }
 
+Mat3 Quat::toRotMat() const {    
+    Mat3 ret;
+    
+    float n, s;
+    float xs, ys, zs; //s stands for scale
+    float wx, wy, wz;
+    float xx, xy, xz;
+    float yy, yz, zz;
+
+    n = (x * x) + (y * y) + (z * z) + (w * w);
+    s = (n > 0.0f) ? (2.0f / n) : 0.0f;
+
+    xs = x * s;  ys = y * s;  zs = z * s;
+    wx = w * xs; wy = w * ys; wz = w * zs;
+    xx = x * xs; xy = x * ys; xz = x * zs;
+    yy = y * ys; yz = y * zs; zz = z * zs;
+    
+    //critical: column-major order
+    ret.m00 = 1.0f - (yy + zz); ret.m01 =         xy - wz;  ret.m02 =         xz + wy;
+    ret.m10 =         xy + wz;  ret.m11 = 1.0f - (xx + zz); ret.m12 =         yz - wx;
+    ret.m20 =         xz - wy;  ret.m21 =         yz + wx;  ret.m22 = 1.0f - (xx + yy);
+    
+    return ret;
+}
+
 // Convert to Matrix
 Mat4 Quat::getMatrix() const {
-	float x2 = x * x;
-	float y2 = y * y;
-	float z2 = z * z;
-	float xy = x * y;
-	float xz = x * z;
-	float yz = y * z;
-	float wx = w * x;
-	float wy = w * y;
-	float wz = w * z;
+    float x2 = x * x;
+    float y2 = y * y;
+    float z2 = z * z;
+    float xy = x * y;
+    float xz = x * z;
+    float yz = y * z;
+    float wx = w * x;
+    float wy = w * y;
+    float wz = w * z;
  
-	// This calculation would be a lot more complicated for non-unit length Quats
-	// Note: The constructor of Mat4 expects the Matrix in column-major format like expected by
-	// OpenGL
-	return Mat4( 1.0f - 2.0f * (y2 + z2), 2.0f * (xy - wz), 2.0f * (xz + wy), 0.0f,
-			     2.0f * (xy + wz), 1.0f - 2.0f * (x2 + z2), 2.0f * (yz - wx), 0.0f,
-			     2.0f * (xz - wy), 2.0f * (yz + wx), 1.0f - 2.0f * (x2 + y2), 0.0f,
-			     0.0f, 0.0f, 0.0f, 1.0f );
+    // This calculation would be a lot more complicated for non-unit length Quats
+    // Note: The constructor of Mat4 expects the Matrix in column-major format like expected by
+    // OpenGL
+    return Mat4( 1.0f - 2.0f * (y2 + z2), 2.0f * (xy - wz), 2.0f * (xz + wy), 0.0f,
+                 2.0f * (xy + wz), 1.0f - 2.0f * (x2 + z2), 2.0f * (yz - wx), 0.0f,
+                 2.0f * (xz - wy), 2.0f * (yz + wx), 1.0f - 2.0f * (x2 + y2), 0.0f,
+                 0.0f, 0.0f, 0.0f, 1.0f );
 }
 
 // Convert to Axis/Angles
 void Quat::getAxisAngle(Vec3& axis, float& angle){
-	float scale = sqrt(x * x + y * y + z * z);
-	axis.x = x / scale;
-	axis.y = y / scale;
-	axis.z = z / scale;
-	angle = acos(w) * 2.0f;
+    float scale = sqrt(x * x + y * y + z * z);
+    axis.x = x / scale;
+    axis.y = y / scale;
+    axis.z = z / scale;
+    angle = acos(w) * 2.0f;
 }
 
 Quat Quat::slerp(Quat& rq, float t){
@@ -297,4 +321,5 @@ Quat Quat::slerp(Quat& rq, float t){
     ret.z = scale0 * z + scale1 * temp[2];
     ret.w = scale0 * w + scale1 * temp[3];
 }
+
 

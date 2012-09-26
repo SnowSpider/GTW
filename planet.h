@@ -389,6 +389,7 @@ class Planet {
     PlanetCell& getCellAt(float longitude, float latitude);
     PlanetCell& getCellAt( Vec3 surfPos );
     void renderAxis();
+    void renderCells();
 };
 
 #endif

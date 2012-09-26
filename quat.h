@@ -36,7 +36,8 @@ class Quat{
     void fromAxis (const Vec3& v, float angle);
     void fromEuler (float pitch, float yaw, float roll);
     void fromMatrix( const Mat4& m );
-    Mat4 getMatrix () const;
+    Mat3 toRotMat() const;
+    Mat4 getMatrix() const;
     void getAxisAngle (Vec3& axis, float& angle);
     Quat slerp(Quat& q, float t);
 };

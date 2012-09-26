@@ -559,3 +559,8 @@ void Planet::renderAxis(){
     glEnable(GL_LIGHTING);
 }
 
+void Planet::renderCells(){
+    for(int i=0;i<cells.size();i++){
+        renderCellBoundary(cells[i]);
+    }
+}

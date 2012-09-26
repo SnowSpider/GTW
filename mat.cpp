@@ -5,111 +5,315 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "vec.h"
 #include "mat.h"
+
 using namespace std;
 
 Mat3::Mat3(){ 
-    m[0] = 1.0;
-	m[1] = 0.0;
-    m[2] = 0.0;
-    m[3] = 0.0;
-    m[4] = 1.0;
-    m[5] = 0.0;
-    m[6] = 0.0;
-    m[7] = 0.0;
-    m[8] = 1.0;
+    n[0] = 0.0;
+    n[1] = 0.0;
+    n[2] = 0.0;
+    n[3] = 0.0;
+    n[4] = 0.0;
+    n[5] = 0.0;
+    n[6] = 0.0;
+    n[7] = 0.0;
+    n[8] = 0.0;
 }
     
-Mat3::Mat3( const float m0, const float m3, const float m6,
-	        const float m1, const float m4, const float m7,
-            const float m2, const float m5, const float m8 ){ 
-    m[0] = m0; 
-    m[1] = m1; 
-    m[2] = m2;
-    m[3] = m3; 
-    m[4] = m4; 
-    m[5] = m5;
-    m[6] = m6; 
-    m[7] = m7; 
-    m[8] = m8;
+Mat3::Mat3( const float m00, const float m10, const float m20,
+            const float m01, const float m11, const float m21,
+            const float m02, const float m12, const float m22 ){ 
+    n[0] = m00; 
+    n[1] = m10; 
+    n[2] = m20;
+    n[3] = m01; 
+    n[4] = m11; 
+    n[5] = m21;
+    n[6] = m02; 
+    n[7] = m12; 
+    n[8] = m22;
 }
-	
+
 float& Mat3::operator [](int i) { 
-	return m[i];
+    return n[i];
 }
 float Mat3::operator []( int i ) const {
-    return m[i];
+    return n[i];
 }
-	
+
+Mat3::Mat3( const Mat3& m ){
+    n[0] = m[0];
+    n[1] = m[1]; 
+    n[2] = m[2];
+    n[3] = m[3]; 
+    n[4] = m[4]; 
+    n[5] = m[5];
+    n[6] = m[6]; 
+    n[7] = m[7]; 
+    n[8] = m[8];
+}
+
+Mat3& Mat3::operator=( const Mat3& m ){
+    n[0] = m[0];
+    n[1] = m[1]; 
+    n[2] = m[2];
+    n[3] = m[3]; 
+    n[4] = m[4]; 
+    n[5] = m[5];
+    n[6] = m[6]; 
+    n[7] = m[7]; 
+    n[8] = m[8];
+    return *this;
+}
+
+void Mat3::setIdentity(){
+    memset(n, 0, sizeof(float) * 9);
+    m00 = m11 = m22 = 1.0f;
+}
+    
 Vec3 Mat3::operator*( const Vec3& v ) const {
     Vec3 result;
     for(int i=0;i<3;i++){
         for(int j=0;j<3;j++){
-            result[i] += m[i*3 + j] * v[j]; 
+            result[i] += n[i*3 + j] * v[j]; 
         }
     }
     return result;
 }
 
+Mat3 Mat3::operator*( const Mat3& m ) const {
+    Mat3 ret;
+    
+    ret.m00 = (m00 * m.m00) + (m01 * m.m10) + (m02 * m.m20);
+    ret.m01 = (m00 * m.m01) + (m01 * m.m11) + (m02 * m.m21);
+    ret.m02 = (m00 * m.m02) + (m01 * m.m12) + (m02 * m.m22);
 
-void Mat3::setIdentity(){
-    m[0] = 1.0;
-	m[1] = 0.0;
-    m[2] = 0.0;
-    m[3] = 0.0;
-    m[4] = 1.0;
-    m[5] = 0.0;
-    m[6] = 0.0;
-    m[7] = 0.0;
-    m[8] = 1.0;
+    ret.m10 = (m10 * m.m00) + (m11 * m.m10) + (m12 * m.m20);
+    ret.m11 = (m10 * m.m01) + (m11 * m.m11) + (m12 * m.m21);
+    ret.m12 = (m10 * m.m02) + (m11 * m.m12) + (m12 * m.m22);
+
+    ret.m20 = (m20 * m.m00) + (m21 * m.m10) + (m22 * m.m20);
+    ret.m21 = (m20 * m.m01) + (m21 * m.m11) + (m22 * m.m21);
+    ret.m22 = (m20 * m.m02) + (m21 * m.m12) + (m22 * m.m22);
+    
+    return ret;
 }
 
+Mat3& Mat3::operator*=( const Mat3& m ){
+    Mat3 ret;
+    
+    ret.m00 = (m00 * m.m00) + (m01 * m.m10) + (m02 * m.m20);
+    ret.m01 = (m00 * m.m01) + (m01 * m.m11) + (m02 * m.m21);
+    ret.m02 = (m00 * m.m02) + (m01 * m.m12) + (m02 * m.m22);
+
+    ret.m10 = (m10 * m.m00) + (m11 * m.m10) + (m12 * m.m20);
+    ret.m11 = (m10 * m.m01) + (m11 * m.m11) + (m12 * m.m21);
+    ret.m12 = (m10 * m.m02) + (m11 * m.m12) + (m12 * m.m22);
+
+    ret.m20 = (m20 * m.m00) + (m21 * m.m10) + (m22 * m.m20);
+    ret.m21 = (m20 * m.m01) + (m21 * m.m11) + (m22 * m.m21);
+    ret.m22 = (m20 * m.m02) + (m21 * m.m12) + (m22 * m.m22);
+    
+    *this = ret;
+    
+    return *this;
+}
+
+/*
+
+void Mat3::setRotation( const Quat& q ){
+    float n, s;
+    float xs, ys, zs; //s stands for scale
+    float wx, wy, wz;
+    float xx, xy, xz;
+    float yy, yz, zz;
+
+    n = (q.x * q.x) + (q.y * q.y) + (q.z * q.z) + (q.w * q.w);
+    s = (n > 0.0f) ? (2.0f / n) : 0.0f;
+
+    xs = q.x * s;  ys = q.y * s;  zs = q.z * s;
+    wx = q.w * xs; wy = q.w * ys; wz = q.w * zs;
+    xx = q.x * xs; xy = q.x * ys; xz = q.x * zs;
+    yy = q.y * ys; yz = q.y * zs; zz = q.z * zs;
+
+    m00 = 1.0f - (yy + zz); m10 =         xy - wz;  m20 =         xz + wy;
+    m01 =         xy + wz;  m11 = 1.0f - (xx + zz); m21 =         yz - wx;
+    m02 =         xz - wy;  m12 =         yz + wx;  m22 = 1.0f - (xx + yy);
+}
+
+*/
+
 Mat4::Mat4(){
-    memset(mat, 0, sizeof(float) * 16);
-    mat[0] = mat[5] = mat[10] = mat[15] = 1.0f;
+    memset(n, 0, sizeof(float) * 16);
+    n[0] = n[5] = n[10] = n[15] = 1.0f;
 }
 
 Mat4::Mat4(float matrix[16]){
-    memcpy((void*)mat, (void*)matrix, sizeof(float) * 16);
+    memcpy((void*)n, (void*)matrix, sizeof(float) * 16);
 }
 
 /*
 A 4x4 matrix
 
-        | 0   4   8  12 |
-  mat = | 1   5   9  13 |
-        | 2   6  10  14 |
-        | 3   7  11  15 |
+      | 0   4   8  12 |
+  m = | 1   5   9  13 |
+      | 2   6  10  14 |
+      | 3   7  11  15 |
 */
 
-Mat4::Mat4(float a, float e, float i, float m,
-           float b, float f, float j, float n,
-           float c, float g, float k, float o,
-           float d, float h, float l, float p){
-    mat[0] = a; //mat[0][0]
-    mat[1] = b; //mat[0][1]
-    mat[2] = c; //mat[0][2]
-    mat[3] = d; //mat[0][3]
-    mat[4] = e; //mat[1][0]
-    mat[5] = f; //mat[1][1]
-    mat[6] = g; //mat[1][2]
-    mat[7] = h; //mat[1][3]
-    mat[8] = i; //mat[2][0]
-    mat[9] = j; //mat[2][1]
-    mat[10] = k; //mat[2][2]
-    mat[11] = l; //mat[2][3]
-    mat[12] = m; //mat[3][0]
-    mat[13] = n; //mat[3][1]
-    mat[14] = o; //mat[3][2]
-    mat[15] = p; //mat[3][3]
+Mat4::Mat4(float n00, float n10, float n20, float n30,
+           float n01, float n11, float n21, float n31,
+           float n02, float n12, float n22, float n32,
+           float n03, float n13, float n23, float n33){
+    n[0] = n00;
+    n[1] = n10; 
+    n[2] = n20; 
+    n[3] = n30; 
+    n[4] = n01; 
+    n[5] = n11; 
+    n[6] = n21; 
+    n[7] = n31; 
+    n[8] = n02; 
+    n[9] = n12; 
+    n[10] = n22; 
+    n[11] = n32; 
+    n[12] = n03; 
+    n[13] = n13; 
+    n[14] = n23; 
+    n[15] = n33; 
 }
 
 float& Mat4::operator []( int i ){
-    return mat[i];
+    return n[i];
 }
 float Mat4::operator []( int i ) const {
-    return mat[i];
+    return n[i];
+}
+
+Mat4::Mat4( const Mat4& m ){
+    n[0] = m[0]; 
+    n[1] = m[1]; 
+    n[2] = m[2]; 
+    n[3] = m[3]; 
+    n[4] = m[4]; 
+    n[5] = m[5]; 
+    n[6] = m[6]; 
+    n[7] = m[7]; 
+    n[8] = m[8]; 
+    n[9] = m[9]; 
+    n[10] = m[10]; 
+    n[11] = m[11]; 
+    n[12] = m[12]; 
+    n[13] = m[13]; 
+    n[14] = m[14]; 
+    n[15] = m[15]; 
+}
+
+Mat4& Mat4::operator=( const Mat4& m ){
+    n[0] = m[0]; 
+    n[1] = m[1]; 
+    n[2] = m[2]; 
+    n[3] = m[3]; 
+    n[4] = m[4]; 
+    n[5] = m[5]; 
+    n[6] = m[6]; 
+    n[7] = m[7]; 
+    n[8] = m[8]; 
+    n[9] = m[9]; 
+    n[10] = m[10]; 
+    n[11] = m[11]; 
+    n[12] = m[12]; 
+    n[13] = m[13]; 
+    n[14] = m[14]; 
+    n[15] = m[15]; 
+    return *this;
+}
+
+Mat4& Mat4::operator=( const Mat3& m ){
+    m00 = m.m00; m10 = m.m10; m20 = m.m20;
+    m01 = m.m01; m11 = m.m11; m21 = m.m21;
+    m02 = m.m02; m12 = m.m12; m22 = m.m22;
+    return *this;
+}
+
+Mat4& Mat4::operator*=( const float scale ){
+    m00 *= scale; m10 *= scale; m20 *= scale;
+    m01 *= scale; m11 *= scale; m21 *= scale;
+    m02 *= scale; m12 *= scale; m22 *= scale;
+    return *this;
+}
+
+float Mat4::SVD(){ 
+    float scale = sqrt( ( (m00 * m00) + (m01 * m01) + (m02 * m02) + 
+                          (m10 * m10) + (m11 * m11) + (m12 * m12) +
+                          (m20 * m20) + (m21 * m21) + (m22 * m22) ) / 3.0f );
+    return scale;
+}
+
+float Mat4::SVD(Mat3& rot3){
+    //this->getRotationScale(rot3);
+    rot3.m00 = m00; rot3.m01 = m01; rot3.m02 = m02;
+    rot3.m10 = m10; rot3.m11 = m11; rot3.m12 = m12;
+    rot3.m20 = m20; rot3.m21 = m21; rot3.m22 = m22;
+
+    // zero-div may occur.
+    float s = 1.0f / sqrt( (m00 * m00) +
+                           (m01 * m01) +
+                           (m02 * m02) );
+    rot3.m00 *= s;
+    rot3.m01 *= s;
+    rot3.m02 *= s;
+
+    s = 1.0f / sqrt( (m10 * m10) +
+                     (m11 * m11) +
+                     (m12 * m12) );
+    rot3.m10 *= s;
+    rot3.m11 *= s;
+    rot3.m12 *= s;
+
+    s = 1.0f / sqrt( (m20 * m20) +
+                     (m21 * m21) +
+                     (m22 * m22) );
+    rot3.m20 *= s;
+    rot3.m21 *= s;
+    rot3.m22 *= s;
+    
+    return SVD();
+}
+
+float Mat4::SVD(Mat4& rot4){
+    rot4 = *this;
+
+    // zero-div may occur.
+    float s = 1.0f / sqrt( (m00 * m00) +
+                           (m01 * m01) +
+                           (m02 * m02) );
+    rot4.m00 *= s;
+    rot4.m01 *= s;
+    rot4.m02 *= s;
+
+    s = 1.0f / sqrt( (m10 * m10) +
+                     (m11 * m11) +
+                     (m12 * m12) );
+    rot4.m10 *= s;
+    rot4.m11 *= s;
+    rot4.m12 *= s;
+
+    s = 1.0f / sqrt( (m20 * m20) +
+                     (m21 * m21) +
+                     (m22 * m22) );
+    rot4.m20 *= s;
+    rot4.m21 *= s;
+    rot4.m22 *= s;
+    
+    return SVD();
+}
+
+void Mat4::setRot(Mat3& rot3){
+    float scale = SVD();
+    *this = rot3;
+    *this *= scale;
 }
 
 //Basic transformations
@@ -131,25 +335,25 @@ Mat4 Mat4::CreateRotationAxis(float degrees, float axis_x, float axis_y, float a
 
     Mat4 out;
 
-    out.mat[0] = rcos + axis_x * axis_x * (1 - rcos);
-    out.mat[1] = axis_z * rsin + axis_y * axis_x * (1 - rcos);
-    out.mat[2] = -axis_y * rsin + axis_z * axis_x * (1 - rcos);
-    out.mat[3] = 0.0f;
+    out[0] = rcos + axis_x * axis_x * (1 - rcos);
+    out[1] = axis_z * rsin + axis_y * axis_x * (1 - rcos);
+    out[2] = -axis_y * rsin + axis_z * axis_x * (1 - rcos);
+    out[3] = 0.0f;
 
-    out.mat[4] = -axis_z * rsin + axis_x * axis_y * (1 - rcos);
-    out.mat[5] = rcos + axis_y * axis_y * (1 - rcos);
-    out.mat[6] = axis_x * rsin + axis_z * axis_y * (1 - rcos);
-    out.mat[7] = 0.0f;
+    out[4] = -axis_z * rsin + axis_x * axis_y * (1 - rcos);
+    out[5] = rcos + axis_y * axis_y * (1 - rcos);
+    out[6] = axis_x * rsin + axis_z * axis_y * (1 - rcos);
+    out[7] = 0.0f;
 
-    out.mat[8] = axis_y * rsin + axis_x * axis_z * (1 - rcos);
-    out.mat[9] = -axis_x * rsin + axis_y * axis_z * (1 - rcos);
-    out.mat[10] = rcos + axis_z * axis_z * (1 - rcos);
-    out.mat[11] = 0.0f;
+    out[8] = axis_y * rsin + axis_x * axis_z * (1 - rcos);
+    out[9] = -axis_x * rsin + axis_y * axis_z * (1 - rcos);
+    out[10] = rcos + axis_z * axis_z * (1 - rcos);
+    out[11] = 0.0f;
 
-    out.mat[12] = 0.0f;
-    out.mat[13] = 0.0f;
-    out.mat[14] = 0.0f;
-    out.mat[15] = 1.0f;
+    out[12] = 0.0f;
+    out[13] = 0.0f;
+    out[14] = 0.0f;
+    out[15] = 1.0f;
 
     return out;
 }
@@ -165,20 +369,20 @@ Mat4 Mat4::CreateRotationPitchYawRoll(float pitch, float yaw, float roll){
     double srsp = sr * sp;
     double crsp = cr * sp;
 
-    out.mat[0] = (float) cp * cy;
-    out.mat[4] = (float) cp * sy;
-    out.mat[8] = (float) - sp;
+    out[0] = (float) cp * cy;
+    out[4] = (float) cp * sy;
+    out[8] = (float) - sp;
 
-    out.mat[1] = (float) srsp * cy - cr * sy;
-    out.mat[5] = (float) srsp * sy + cr * cy;
-    out.mat[9] = (float) sr * cp;
+    out[1] = (float) srsp * cy - cr * sy;
+    out[5] = (float) srsp * sy + cr * cy;
+    out[9] = (float) sr * cp;
 
-    out.mat[2] = (float) crsp * cy + sr * sy;
-    out.mat[6] = (float) crsp * sy - sr * cy;
-    out.mat[10] = (float) cr * cp;
+    out[2] = (float) crsp * cy + sr * sy;
+    out[6] = (float) crsp * sy - sr * cy;
+    out[10] = (float) cr * cp;
 
-    out.mat[3] = out.mat[7] = out.mat[11] = 0.0;
-    out.mat[15] = 1.0;
+    out[3] = out[7] = out[11] = 0.0;
+    out[15] = 1.0;
 
     return out;
 }
@@ -186,10 +390,10 @@ Mat4 Mat4::CreateRotationPitchYawRoll(float pitch, float yaw, float roll){
 Mat4 Mat4::CreateScale(float x, float y, float z){
     Mat4 out;
 
-    out.mat[0] = x;
-    out.mat[5] = y;
-    out.mat[10] = z;
-    out.mat[15] = 1.0f;
+    out[0] = x;
+    out[5] = y;
+    out[10] = z;
+    out[15] = 1.0f;
 
     return out;
 }
@@ -197,10 +401,10 @@ Mat4 Mat4::CreateScale(float x, float y, float z){
 Mat4 Mat4::CreateTranslation(float x, float y, float z){
     Mat4 out;
 
-    out.mat[12] = x;
-    out.mat[13] = y;
-    out.mat[14] = z;
-    out.mat[15] = 1.0f;
+    out[12] = x;
+    out[13] = y;
+    out[14] = z;
+    out[15] = 1.0f;
 
     return out;
 }
@@ -223,12 +427,12 @@ Mat4 Mat4::CreatePerspectiveProjection(float fovY, float aspect, float zNear, fl
 
     Mat4 out;
 
-    out.mat[0] = cotangent / aspect;
-    out.mat[5] = cotangent;
-    out.mat[10] = -(zFar + zNear) / deltaZ;
-    out.mat[11] = -1;
-    out.mat[14] = -2 * zNear * zFar / deltaZ;
-    out.mat[15] = 0;
+    out[0] = cotangent / aspect;
+    out[5] = cotangent;
+    out[10] = -(zFar + zNear) / deltaZ;
+    out[11] = -1;
+    out[14] = -2 * zNear * zFar / deltaZ;
+    out[15] = 0;
 
     return out;
 }
@@ -240,12 +444,12 @@ Mat4 Mat4::CreateOrthographicProjection(float left, float right, float bottom, f
     float ty = -((top + bottom) / (top - bottom));
     float tz = -((farVal + nearVal) / (farVal - nearVal));
 
-    out.mat[0] = 2 / (right - left);
-    out.mat[5] = 2 / (top - bottom);
-    out.mat[10] = -2 / (farVal - nearVal);
-    out.mat[12] = tx;
-    out.mat[13] = ty;
-    out.mat[14] = tz;
+    out[0] = 2 / (right - left);
+    out[5] = 2 / (top - bottom);
+    out[10] = -2 / (farVal - nearVal);
+    out[12] = tx;
+    out[13] = ty;
+    out[14] = tz;
 
     return out;
 }
@@ -267,17 +471,17 @@ Mat4 Mat4::CreateLookAt(const Vec3& pEye, const Vec3& pCenter, const Vec3& pUp){
 
     u = (s^f).normalized();
 
-    out.mat[0] = s.x;
-    out.mat[4] = s.y;
-    out.mat[8] = s.z;
+    out[0] = s.x;
+    out[4] = s.y;
+    out[8] = s.z;
 
-    out.mat[1] = u.x;
-    out.mat[5] = u.y;
-    out.mat[9] = u.z;
+    out[1] = u.x;
+    out[5] = u.y;
+    out[9] = u.z;
 
-    out.mat[2] = -f.x;
-    out.mat[6] = -f.y;
-    out.mat[10] = -f.z;
+    out[2] = -f.x;
+    out[6] = -f.y;
+    out[10] = -f.z;
 
     translate = Mat4::CreateTranslation(-pEye.x, -pEye.y, -pEye.z);
     out = out.Multiply(translate);
@@ -291,7 +495,7 @@ Mat4 Mat4::Inverse() const {
     int i, j, k;
 
     for (i = 0; i < 16; i++){
-        tmat[i] = this->mat[i];
+        tmat[i] = this->n[i];
     }
 
     Mat4 pOut;
@@ -315,12 +519,12 @@ Mat4 Mat4::Inverse() const {
         }
 
         for (k = 0; k < 4; k++){
-            temp[k] = pOut.mat[i1 * 4 + k];
+            temp[k] = pOut[i1 * 4 + k];
         }
 
         for (k = 0; k < 4; k++){
-            pOut.mat[i1 * 4 + k] = pOut.mat[j * 4 + k];
-            pOut.mat[j * 4 + k] = temp[k];
+            pOut[i1 * 4 + k] = pOut[j * 4 + k];
+            pOut[j * 4 + k] = temp[k];
         }
 
         // Scale row j to have a unit diagonal
@@ -330,7 +534,7 @@ Mat4 Mat4::Inverse() const {
         }
 
         for (k = 0; k < 4; k++){
-            pOut.mat[j * 4 + k] /= tmat[j * 4 + j];
+            pOut[j * 4 + k] /= tmat[j * 4 + j];
             tmat[j * 4 + k] /= tmat[j * 4 + j];
         }
 
@@ -338,7 +542,7 @@ Mat4 Mat4::Inverse() const {
         for (i = 0; i < 4; ++i){
             if (i != j){
                 for (k = 0; k < 4; k++){
-                    pOut.mat[i*4 + k] -= tmat[i*4 + j] * pOut.mat[j*4 + k];
+                    pOut[i*4 + k] -= tmat[i*4 + j] * pOut[j*4 + k];
                     tmat[i*4 + k] -= tmat[i*4 + j] * tmat[j*4 + k];
                 }
             }
@@ -354,18 +558,16 @@ bool Mat4::IsIdentity() const {
                                        0.0f, 0.0f, 1.0f, 0.0f,
                                        0.0f, 0.0f, 0.0f, 1.0f };
 
-    return (memcmp(identity, this->mat, sizeof(float) * 16) == 0);
+    return (memcmp(identity, this->n, sizeof(float) * 16) == 0);
 }
 
 Mat4 Mat4::Transpose() const {
     int x, z;
     Mat4 pOut;
 
-    for (z = 0; z < 4; ++z)
-    {
-        for (x = 0; x < 4; ++x)
-        {
-            pOut.mat[(z * 4) + x] = mat[(x * 4) + z];
+    for (z = 0; z < 4; ++z){
+        for (x = 0; x < 4; ++x){
+            pOut[(z * 4) + x] = n[(x * 4) + z];
         }
     }
 
@@ -376,27 +578,27 @@ Mat4 Mat4::Multiply(const Mat4& other) const//returns this * other
 {
     Mat4 out;
 
-    const float *m1 = mat, *m2 = other.mat;
+    const float *m1 = n, *m2 = other.n;
 
-    out.mat[0] = m1[0] * m2[0] + m1[4] * m2[1] + m1[8] * m2[2] + m1[12] * m2[3];
-    out.mat[1] = m1[1] * m2[0] + m1[5] * m2[1] + m1[9] * m2[2] + m1[13] * m2[3];
-    out.mat[2] = m1[2] * m2[0] + m1[6] * m2[1] + m1[10] * m2[2] + m1[14] * m2[3];
-    out.mat[3] = m1[3] * m2[0] + m1[7] * m2[1] + m1[11] * m2[2] + m1[15] * m2[3];
+    out[0] = m1[0] * m2[0] + m1[4] * m2[1] + m1[8] * m2[2] + m1[12] * m2[3];
+    out[1] = m1[1] * m2[0] + m1[5] * m2[1] + m1[9] * m2[2] + m1[13] * m2[3];
+    out[2] = m1[2] * m2[0] + m1[6] * m2[1] + m1[10] * m2[2] + m1[14] * m2[3];
+    out[3] = m1[3] * m2[0] + m1[7] * m2[1] + m1[11] * m2[2] + m1[15] * m2[3];
 
-    out.mat[4] = m1[0] * m2[4] + m1[4] * m2[5] + m1[8] * m2[6] + m1[12] * m2[7];
-    out.mat[5] = m1[1] * m2[4] + m1[5] * m2[5] + m1[9] * m2[6] + m1[13] * m2[7];
-    out.mat[6] = m1[2] * m2[4] + m1[6] * m2[5] + m1[10] * m2[6] + m1[14] * m2[7];
-    out.mat[7] = m1[3] * m2[4] + m1[7] * m2[5] + m1[11] * m2[6] + m1[15] * m2[7];
+    out[4] = m1[0] * m2[4] + m1[4] * m2[5] + m1[8] * m2[6] + m1[12] * m2[7];
+    out[5] = m1[1] * m2[4] + m1[5] * m2[5] + m1[9] * m2[6] + m1[13] * m2[7];
+    out[6] = m1[2] * m2[4] + m1[6] * m2[5] + m1[10] * m2[6] + m1[14] * m2[7];
+    out[7] = m1[3] * m2[4] + m1[7] * m2[5] + m1[11] * m2[6] + m1[15] * m2[7];
 
-    out.mat[8] = m1[0] * m2[8] + m1[4] * m2[9] + m1[8] * m2[10] + m1[12] * m2[11];
-    out.mat[9] = m1[1] * m2[8] + m1[5] * m2[9] + m1[9] * m2[10] + m1[13] * m2[11];
-    out.mat[10] = m1[2] * m2[8] + m1[6] * m2[9] + m1[10] * m2[10] + m1[14] * m2[11];
-    out.mat[11] = m1[3] * m2[8] + m1[7] * m2[9] + m1[11] * m2[10] + m1[15] * m2[11];
+    out[8] = m1[0] * m2[8] + m1[4] * m2[9] + m1[8] * m2[10] + m1[12] * m2[11];
+    out[9] = m1[1] * m2[8] + m1[5] * m2[9] + m1[9] * m2[10] + m1[13] * m2[11];
+    out[10] = m1[2] * m2[8] + m1[6] * m2[9] + m1[10] * m2[10] + m1[14] * m2[11];
+    out[11] = m1[3] * m2[8] + m1[7] * m2[9] + m1[11] * m2[10] + m1[15] * m2[11];
 
-    out.mat[12] = m1[0] * m2[12] + m1[4] * m2[13] + m1[8] * m2[14] + m1[12] * m2[15];
-    out.mat[13] = m1[1] * m2[12] + m1[5] * m2[13] + m1[9] * m2[14] + m1[13] * m2[15];
-    out.mat[14] = m1[2] * m2[12] + m1[6] * m2[13] + m1[10] * m2[14] + m1[14] * m2[15];
-    out.mat[15] = m1[3] * m2[12] + m1[7] * m2[13] + m1[11] * m2[14] + m1[15] * m2[15];
+    out[12] = m1[0] * m2[12] + m1[4] * m2[13] + m1[8] * m2[14] + m1[12] * m2[15];
+    out[13] = m1[1] * m2[12] + m1[5] * m2[13] + m1[9] * m2[14] + m1[13] * m2[15];
+    out[14] = m1[2] * m2[12] + m1[6] * m2[13] + m1[10] * m2[14] + m1[14] * m2[15];
+    out[15] = m1[3] * m2[12] + m1[7] * m2[13] + m1[11] * m2[14] + m1[15] * m2[15];
 
     return out;
 }
@@ -404,11 +606,9 @@ Mat4 Mat4::Multiply(const Mat4& other) const//returns this * other
 bool Mat4::Equal(const Mat4& other, float threshold) const {
     int i = 0;
 
-    for (i = 0; i < 16; ++i)
-    {
-        if (!(mat[i] + threshold > other.mat[i] &&
-                mat[i] - threshold < other.mat[i]))
-        {
+    for (i = 0; i < 16; ++i){
+        if (!(n[i] + threshold > other.n[i] &&
+                n[i] - threshold < other.n[i])){
             return false;
         }
     }
@@ -418,27 +618,27 @@ bool Mat4::Equal(const Mat4& other, float threshold) const {
 
 Vec3 Mat4::GetUpVec3() const {
     Vec3 out;
-    out.x = mat[4];
-    out.y = mat[5];
-    out.z = mat[6];
+    out.x = n[4];
+    out.y = n[5];
+    out.z = n[6];
 
     return out;
 }
 
 Vec3 Mat4::GetRightVec3() const {
     Vec3 out;
-    out.x = mat[0];
-    out.y = mat[1];
-    out.z = mat[2];
+    out.x = n[0];
+    out.y = n[1];
+    out.z = n[2];
 
     return out;
 }
 
 Vec3 Mat4::GetForwardVec3() const {
     Vec3 out;
-    out.x = mat[8];
-    out.y = mat[9];
-    out.z = mat[10];
+    out.x = n[8];
+    out.y = n[9];
+    out.z = n[10];
 
     return out;
 }
@@ -447,18 +647,18 @@ Vec3 Mat4::GetForwardVec3() const {
 //Transform a vector through this matrix:
 Vec3 Mat4::Multiply(const Vec3& v) const {
     Vec3 out;
-    out.x = mat[0]*v.x + mat[4]*v.y + mat[8]*v.z;
-    out.y = mat[1]*v.x + mat[5]*v.y + mat[9]*v.z;
-    out.z = mat[2]*v.x + mat[6]*v.y + mat[10]*v.z;
+    out.x = n[0]*v.x + n[4]*v.y + n[8]*v.z;
+    out.y = n[1]*v.x + n[5]*v.y + n[9]*v.z;
+    out.z = n[2]*v.x + n[6]*v.y + n[10]*v.z;
     return out; //returns Vec3( this * Vec4(v,1.0) )
 }
 
 Vec4 Mat4::Multiply(const Vec4& v) const {
     Vec4 out;
-    out.x = mat[0]*v.x + mat[4]*v.y + mat[ 8]*v.z + mat[12]*v.w;
-    out.y = mat[1]*v.x + mat[5]*v.y + mat[ 9]*v.z + mat[13]*v.w;
-    out.z = mat[2]*v.x + mat[6]*v.y + mat[10]*v.z + mat[14]*v.w;
-    out.w = mat[3]*v.x + mat[7]*v.y + mat[11]*v.z + mat[15]*v.w;
+    out.x = n[0]*v.x + n[4]*v.y + n[ 8]*v.z + n[12]*v.w;
+    out.y = n[1]*v.x + n[5]*v.y + n[ 9]*v.z + n[13]*v.w;
+    out.z = n[2]*v.x + n[6]*v.y + n[10]*v.z + n[14]*v.w;
+    out.w = n[3]*v.x + n[7]*v.y + n[11]*v.z + n[15]*v.w;
     return out; //returns this * v
 }
 
