@@ -1,6 +1,7 @@
-#ifndef __DRAWPLANET_H__
-#define __DRAWPLANET_H__
+#ifndef __PLANET_H__
+#define __PLANET_H__
 
+#include <iostream>
 #include <vector>
 #include "vec3.h"
 
@@ -30,7 +31,7 @@ class PlanetVertex: public Vec3{
     float altitude;
     float longitude;
     float latitude;
-    vector<int> neighbors;
+    vector<unsigned int> neighbors;
     bool positive;
     
     PlanetVertex(){
@@ -43,7 +44,7 @@ class PlanetVertex: public Vec3{
     
     PlanetVertex( const float x, const float y, const float z ){
         id = -1;
-        n[0] = x; 
+        n[0] = x;
         n[1] = y;
         n[2] = z;
         altitude = 0;
@@ -62,7 +63,7 @@ class PlanetVertex: public Vec3{
         latitude = 0;
         positive = true;
     }
-        
+    
     PlanetVertex( const PlanetVertex& v ){
         id = v.id; //critical
         n[0] = v[0];
@@ -71,6 +72,7 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
+        neighbors = v.neighbors;
         positive = v.positive;
     }
     
@@ -93,6 +95,7 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
+        neighbors = v.neighbors;
         positive = v.positive;
     }
     
@@ -104,18 +107,28 @@ class PlanetVertex: public Vec3{
         altitude = v.altitude;
         longitude = v.longitude;
         latitude = v.latitude;
+        neighbors = v.neighbors;
         positive = v.positive;
         return *this;
     }
     
-    bool equals(const PlanetVertex& v) {
-        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2]) return true;
+    bool equals(const PlanetVertex& v) const {
+        if(n[0]==v[0] && n[1]==v[1] && n[2]==v[2] && positive == v.positive) return true;
         else return false;
     }
     
     operator bool() const {
         return positive;
     }
+    
+    void marry(PlanetVertex& v){
+        if(positive && v.positive){
+            neighbors.push_back(v.id);
+            v.neighbors.push_back(id);
+            //cout << neighbors.size() << endl;
+        }
+    }
+    
 };
 
 class PlanetFace{
@@ -186,15 +199,15 @@ class PlanetFace{
 };
 
 class PlanetCell{
-    public:
+    public: 
     unsigned int id;
-    vector<int> vertices;
-    int normal;
+    unsigned int centerId;
     int owner;
     vector<int> neighbors;
     
     PlanetCell(){
-        normal = -1;
+        id = -1;
+        centerId = -1;
         owner = -1;
     }
     
@@ -277,8 +290,8 @@ class CellList{
     }
     
     void add(PlanetCell& c){
-        c.id = currentId++;
         _cells.push_back(c);
+        c.id = currentId++;
     }
     
     PlanetCell& operator []( int i ){ 
@@ -298,6 +311,7 @@ class Planet{
     int numCell; // number of cells
 
     VertexList vertices;
+    VertexList rogueVertices;
     FaceList faces;
     CellList cells;
     
@@ -326,6 +340,7 @@ class Planet{
     void drawFace (PlanetFace& f);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b);
     void render();
+    void renderWireframe();
 };
 
 #endif
