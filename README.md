@@ -1,4 +1,0 @@
-GTW
-===
-
-Global Thermonuclear War
