@@ -55,6 +55,7 @@ Planet myPlanet(center, axis, longitude_zero, radius, k);
 // Debugging flags
 bool drawPlanet = true;
 bool drawWireframe = false;
+bool drawSelectionField = false;
 bool drawAxis = true;
 bool drawCell = false;
 bool drawTempCell = false;
@@ -358,7 +359,8 @@ void drawScene(void){
         //glMultMatrixf(curQuat.getMatrix().n);
         
         if(drawAxis) myPlanet.renderAxis();
-        if(drawWireframe) myPlanet.renderCells();
+        if(drawWireframe) myPlanet.renderWireframe();
+        if(drawSelectionField) myPlanet.renderCells();
         if(drawPlanet){
             glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
             myPlanet.renderEarth();
@@ -433,8 +435,8 @@ void handleKeyPress(unsigned char key, int x, int y){
             rotateScene_hrot(1.0f * PIOVER180);
             break;
         case 'f':
-            if(drawWireframe) drawWireframe = false;
-            else drawWireframe = true;
+            if(drawSelectionField) drawSelectionField = false;
+            else drawSelectionField = true;
             break;
         case 'g':
             if(drawPlanet) drawPlanet = false;
