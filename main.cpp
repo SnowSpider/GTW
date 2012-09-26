@@ -55,12 +55,12 @@ bool leftButtonDown = false;
 bool middleButtonDown = false;
 bool rightButtonDown = false;
 
-float tx = 0.0f; 
-float ty = 0.0f;
 float xi = 0.0f;
 float yi = 0.0f;
 float theta = 0.0f;
 float phi = 0.0f;
+
+float altitudeMultiplier = 0.0;
 
 void renderAxis();
 void createPlanet();
@@ -233,17 +233,9 @@ void camera(void){
     
     glTranslatef(0,0,-zoom);
     glTranslatef(-xpos, -ypos, -zpos);
-    //glRotatef(yrot, 0, 1, 0); //left/right
-    //glRotatef(xrot, 1, 0, 0); //up/down
     glRotatef(yrot, 0, 1, 0);
     glRotatef(xrot, cos(yrot*PI/180.0), 0, sin(yrot*PI/180.0));
     
-    /*
-    glTranslatef(-tx, ty, 0);
-	glTranslatef(0, 0, 10.0*zoom);
-	glRotatef(theta, 0, 1, 0);
-	glRotatef(phi, cos(theta*PI/180.0), 0, sin(theta*PI/180.0));
-	*/
 }
 
 //GLUT callback for reshaping the window.
@@ -388,8 +380,6 @@ void mouseButton(int button, int state, int x, int y){
 
 void mouseMotion(int x, int y){
     y = window_height - y;
-
-	// YOUR CODE HERE
 	
 	if(leftButtonDown){
 	    float deltaX = x - xi;
@@ -405,10 +395,11 @@ void mouseMotion(int x, int y){
 	if(middleButtonDown){
 	    float deltaX = x - xi;
 	    float deltaY = y - yi;
-	    tx += (deltaX * 0.1);
-	    ty += (deltaY * 0.1);
+	    xpos += (deltaX * 0.1);
+	    ypos += (deltaY * 0.1);
 	    xi = x;
 	    yi = y;
+	    cout << "Woolooloo" << endl;
 	}
 	
 	if(rightButtonDown){

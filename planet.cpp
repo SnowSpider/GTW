@@ -32,7 +32,7 @@ GLuint loadTexture(Image* image) {
     return textureId; //Returns the id of the texture
 }
 
-void Planet::init(){
+void Planet::init(){ //char* textureFile, char* terrainFile, float altitudeMultiplier
     vertices.clear();
     faces.clear();
     cells.clear();
@@ -127,6 +127,7 @@ void Planet::init(){
     */
     
     mapFaces();
+    mapTerrain("terrain.bmp", 0.1);
     
     /*
     for(int i=0;i<vertices.size();i++){
@@ -252,18 +253,6 @@ void Planet::mapFace(PlanetFace& f){
         
     }
     */
-     
-    /*
-    Vec3 faceCenter = (a + b + c)/ 3.0f; // face center
-    Vec3 faceNormal = faceCenter - center; // face normal
-    */
-    /*
-    unsigned char color = (unsigned char)terrain->pixels[3 * (latitude * terrain->width + longitude)];
-    float h = height * ((color / 255.0f) - 0.5f);
-    */
-    
-    //glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    //glColor3f(1.0,0.0,0.0);
     
     /*
     signed area = sum of 2-d cross product
@@ -283,73 +272,30 @@ void Planet::mapFace(PlanetFace& f){
         */
         
         if(c[0]<=0){
-            //cLongitude++;
             PlanetVertex newC(c);
-            //newC.longitude = cLongitude;
-            //newC.latitude = cLatitude;
             newC.longitude++;
             newC.positive = false;
-            
             vertices.add(newC);
             f.v[2] = newC.id;
-            //cout << "c.id = " << c.id << ", newC.id = " << newC.id << endl;
-            //cout << "c.longitude = " << c.longitude << endl;
-            //cout << "c.latitude = " << cLatitude << endl;
-            //cout << "newC.longitude = " << newC.longitude << endl;
-            //cout << "newC.latitude = " << newC.latitude << endl;
-            //if(vertices[vertices.currentId-1].positive == false) cout << "aaaaaaa!!!!" << endl;
         }
         if(b[0]<=0){
-            //bLongitude++;
             PlanetVertex newB(b);
-            //newB.longitude = bLongitude;
-            //newB.latitude = bLatitude;
             newB.longitude++;
             newB.positive = false;
-            
             vertices.add(newB);
             f.v[1] = newB.id;
-            //cout << "b.id = " << b.id << ", newB.id = " << newB.id << endl;
-            //cout << "b.longitude = " << b.longitude << endl;
-            //cout << "b.latitude = " << bLatitude << endl;
-            //cout << "newB.longitude = " << newB.longitude << endl;
-            //cout << "newB.latitude = " << newB.latitude << endl;
-            //if(vertices[vertices.currentId-1].positive == false) cout << "aaaaaaa!!!!" << endl;
         }
         if(a[0]<=0){
-            //aLongitude++;
             PlanetVertex newA(a);
-            //newA.longitude = aLongitude;
-            //newA.latitude = aLatitude;
             newA.longitude++;
             newA.positive = false;
-            
             vertices.add(newA);
             f.v[0] = newA.id;
-            //cout << "a.id = " << a.id << ", newA.id = " << newA.id << endl;
-            //cout << "a.longitude = " << a.longitude << endl;
-            //cout << "a.latitude = " << aLatitude << endl;
-            //cout << "newA.longitude = " << newA.longitude << endl;
-            //cout << "newA.latitude = " << newA.latitude << endl;
-            //if(vertices[vertices.currentId-1].positive == false) cout << "aaaaaaa!!!!" << endl;
         }
-        
         f.positive = false;
     }
     
-    // terrain mapping 
-
-    /*
-    glTexCoord2f(cLongitude, cLatitude);
-    glVertex3d(c[0], c[1], c[2]); //Vertex c
-    glTexCoord2f(bLongitude, bLatitude);
-    glVertex3d(b[0], b[1], b[2]); //Vertex b
-    glTexCoord2f(aLongitude, aLatitude);
-    glVertex3d(a[0], a[1], a[2]); //Vertex a
-    */
 }
-
-
 
 void Planet::mapFaces(){
     for(int i=0;i<faces.size();i++){
@@ -362,6 +308,27 @@ void Planet::mapFaces(){
     }
 }
 
+void Planet::mapTerrain(const char* filename, float unitHeight){
+    Image* image = loadBMP(filename);
+    
+    for(int i=0;i<vertices.size();i++){
+        PlanetVertex& temp = vertices[i];
+        int x = image->width * temp.longitude;
+        int y = image->height * temp.latitude;
+        unsigned char color = (unsigned char)image->pixels[3 * (y * image->width + x)];
+        float h = unitHeight * ((color / 255.0f) - 0.5f);
+        temp.altitude = h;
+        Vec3 unitRadial = temp - center;
+        unitRadial.normalize();
+        Vec3 newRadial = center + (unitRadial * (radius + h));
+        temp[0] = newRadial[0];
+        temp[1] = newRadial[1];
+        temp[2] = newRadial[2];
+    }
+    
+    delete image;
+}
+
 void Planet::drawFace(PlanetFace& f){
     PlanetVertex& a = vertices[f.v[0]]; 
     PlanetVertex& b = vertices[f.v[1]]; 
@@ -369,7 +336,6 @@ void Planet::drawFace(PlanetFace& f){
     
     Vec3 triCenter = (a + b + c)/ 3.0f; // face center
     Vec3 triNormal = triCenter - center; // face normal
-    
     
     glBegin(GL_TRIANGLES);
         glNormal3d(triNormal[0], triNormal[1], triNormal[2]); //Normal for lighting
@@ -465,22 +431,25 @@ void Planet::generateCells(){
         if(vertices[i].neighbors.size()>0){
             PlanetCell tempCell(vertices[i]);
             vector<unsigned int> n = tempCell.neighbors;
-            PlanetVertex tempVert;
+            PlanetVertex newVert;
             for(int j=0;j<n.size();j++){
                 PlanetVertex currentNeighbor = vertices[n[j]];
                 //cout << "vertices[i] = (" << vertices[i][0] << "," << vertices[i][1] << "," << vertices[i][0] << ")" << endl;
                 //cout << "vertices[n[j]] = (" << vertices[n[j]][0] << "," << vertices[n[j]][1] << "," << vertices[n[j]][0] << ")" << endl;
-                tempVert = midpoint(vertices[i], currentNeighbor);
+                newVert = midpoint(vertices[i], currentNeighbor);
                 //cout << "tempVert = (" << tempVert[0] << "," << tempVert[1] << "," << tempVert[0] << ")" << endl;
-                vertices.add(tempVert); // NOT shared between cells
+                vertices.add(newVert); // NOT shared between cells
                 tempCell.paramVerts.push_back(vertices.currentId - 1);
             }
             for(int j=0;j<faces.size();j++){
                 if( vertices[faces[j].v[0]].equals(vertices[i]) || 
                     vertices[faces[j].v[1]].equals(vertices[i]) || 
                     vertices[faces[j].v[2]].equals(vertices[i]) ){
-                    tempVert = faces[j].center;
-                    vertices.add(tempVert);
+                    //newVert = faces[j].center;
+                    newVert = midpoint( vertices[faces[j].v[0]], 
+                                         vertices[faces[j].v[1]], 
+                                         vertices[faces[j].v[2]] );
+                    vertices.add(newVert);
                     tempCell.paramVerts.push_back(vertices.currentId - 1);
                 }
             }
@@ -582,11 +551,52 @@ void Planet::renderCells(){
             }
             */
         }
-        
-        
-        
     }
 }
+
+void Planet::generateBorder(){
+    
+}
+
+PlanetCell& Planet::findCell(float longitude, float latitude){ //input in degrees
+    /*
+    First, the point normalized to a direction vector. 
+    The angle between the point and the hex center can be found by 
+    
+    acos( (n dot hexpos ) / planetRadius ). 
+    
+    Whichever hex has the smallest such angle contains the point. 
+    In my demo, checking every hex was fast enough even on a large subdivision level, 
+    for a game you would probably want to add an acceleration structure 
+    (perhaps as a 2D kd-tree in spherical coordinates).
+    */
+    longitude = longitude * PI / 180.0;
+    latitude = latitude * PI / 180.0;
+    
+    Vec3 target( center[0] + (radius * cos(longitude) * sin(latitude)),
+                 center[0] + (radius * sin(longitude) * sin(latitude)), 
+                 center[0] + (radius * cos(latitude)));
+    float min = PI;
+    float temp;
+    int tempId = -1;
+    for(int i=0;i<cells.size();i++){
+        temp = target.angle(vertices[cells[i].centerId]);
+        if(temp < min){
+            min = temp;
+            tempId = i;
+        }
+    }
+    return cells[tempId];
+}
+
+void Planet::highlightCell(PlanetCell& target){
+    
+}
+
+void place(Piece& p, float x, float y){
+    
+}
+
 
 
 

@@ -378,6 +378,121 @@ class CellList{
 	}
 };
 
+class Projectile{
+    public:
+    unsigned int id;
+    string name;
+    bool guided;
+    float blastRadius;
+    
+    
+};
+
+class Weapon{
+    public:
+    unsigned int id;
+    string name;
+    int range;
+    int reloadTime; //in miliseconds
+    int damage;
+    
+};
+
+class Species{
+    public: 
+    unsigned int id;
+    bool mobile;
+    
+    string name;
+    string designation;
+    string description;
+    //Weapon weapon;
+    
+    int weaponId;
+    int shockArmor;
+    int pierceArmor;
+    int cutArmor;
+    int thermalArmor;
+    int chemicalArmor;
+    int radiationArmor;
+    
+    float sightDistance;
+    float radarDistance;
+    int cost;
+    int population;
+    int time; //in miliseconds
+    float maxLife;
+    float maxStamina;
+    float maxFuel;
+    float maxVelocity;
+    float brakeRate;
+    float acceleration;
+    float turnRate;
+    float minWaterDepth;
+    float maxWaterDepth;
+    float serviceCeiling;
+    
+    //3d model
+    //idle animation
+    //move animation
+    //attack animation
+    //death animation
+    //chear animation
+    //items
+    //aura
+    //trample damage
+    
+};
+
+class Piece{
+    public: 
+    unsigned int id;
+    unsigned int owner;
+    unsigned int speciesId;
+    float longitude;
+    float latitude;
+    float altitude;
+    
+    float range;
+    int reloadTime; //in miliseconds
+    int damage;
+    int shockArmor;
+    int pierceArmor;
+    int cutArmor;
+    int thermalArmor;
+    int chemicalArmor;
+    int radiationArmor;
+    
+    float sightDistance;
+    float radarDistance;
+    
+    float life;
+    float stamina;
+    int experience;
+    
+    bool mobile;
+    bool alive;
+    
+    Piece(){
+        
+    }
+    
+    Piece( const Piece& p ){
+        
+    }
+    
+    Piece& operator=( const Piece& p ){
+        
+        return *this;
+    }
+    
+    void teleport(float x, float y){
+        longitude = x;
+        latitude = y;
+    }
+    
+};
+
 class Planet{
     public:
     int k; // frequency of subdivision
@@ -389,6 +504,8 @@ class Planet{
     VertexList rogueVertices;
     FaceList faces;
     CellList cells;
+    
+    vector<int> owners;
     
     Vec3 center;
     Vec3 axis; // axis vector
@@ -412,6 +529,7 @@ class Planet{
     void mapVertex(PlanetVertex& v);
     void mapFace (PlanetFace& f);
     void mapFaces();
+    void mapTerrain(const char* filename, float unitHeight);
     void drawFace (PlanetFace& f);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b);
     PlanetVertex midpointOnSphere (PlanetVertex& a, PlanetVertex& b, PlanetVertex& c);
@@ -421,6 +539,10 @@ class Planet{
     void renderWireframe();
     void generateCells();
     void renderCells();
+    void generateBorder();
+    PlanetCell& findCell(float longitude, float latitude);
+    void highlightCell(PlanetCell& target);
+    void place(Piece& p, float x, float y);
 };
 
 #endif

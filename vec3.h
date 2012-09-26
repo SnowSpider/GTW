@@ -3,6 +3,7 @@
 
 class Vec3{
     public:
+    //float x, y, z;
     float n[3];
     
     Vec3();

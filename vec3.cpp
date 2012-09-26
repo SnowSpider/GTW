@@ -86,8 +86,8 @@ Vec3 Vec3::operator^( const Vec3& v ) const {
 float Vec3::angle( const Vec3& v ) const {
     float s = sqrt(length2() * v.length2());
 	//btFullAssert(s != btScalar(0.0));
-	//if(s == 0.0) cout << "s == 0" << endl;//exit(0);
-	return acos(dot(v) / s);
+	//if(s == 0.0) cout << "FFFFFUUUUUUUU-" << endl;//exit(0);
+	return acos(dot(v) / s); //expressed in radians
 }
     
 Vec3 Vec3::operator/( const float d ) {
