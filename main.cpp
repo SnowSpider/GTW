@@ -11,21 +11,52 @@
 #endif
 
 #include <stdio.h>
+#include "imageloader.h"
 
-#include "planet.h"
+#include "vec.h"
+#include "mat.h"
 #include "quat.h"
-#include <math.h>
+#include "planet.h"
 #include "arcball.h"
 
 using namespace std;
 
-#define PIOVER180 0.01745329252
-#define PICK_TOL 1.0
-#define PICK_BUFFER_SIZE 1024
-
 // Window size
 int window_width = 640, window_height = 480;
 float window_aspect = (float)window_width / (float)window_height;
+int currentButton = 0; // 0 for SP, 1 for MP, 2 for Options, 3 for Credits, 4 for Quit
+
+enum {
+    Game_MAIN,
+    Game_CAMPGAIGN,
+    Game_MULTIPLAYER,
+    Game_LOADING,
+    Game_PLANET,
+    Game_BRIEFING,
+    Game_THEATRE,
+    Game_DEBRIEFING,
+    Game_OPTIONS,
+    Game_ACHIEVEMENTS,
+    Game_CREDITS,
+    Game_MOVIE
+};
+/*
+enum
+{
+	MOUSE_LEFT_BUTTON = 0,
+	MOUSE_MIDDLE_BUTTON = 1,
+	MOUSE_RIGHT_BUTTON = 2,
+	MOUSE_SCROLL_UP = 3,
+	MOUSE_SCROLL_DOWN = 4
+};
+*/
+int gameState = Game_PLANET; // 0 for main menu, 1 for game, 2 for cinematics
+
+GLuint texId_day;
+GLuint texId_night;
+GLuint texId_pop;
+GLuint texId_terrain;
+GLuint texId_spec;
 
 // ArcBall variables
 Mat4 transform ( 1.0f,  0.0f,  0.0f,  0.0f, // NEW: Final transform
@@ -40,27 +71,9 @@ Mat3 lastRot ( 1.0f,  0.0f,  0.0f, // NEW: Last Rotation
 Mat3 curRot ( 1.0f,  0.0f,  0.0f, // NEW: This Rotation
               0.0f,  1.0f,  0.0f,
               0.0f,  0.0f,  1.0f );
-ArcBall myArcBall(640.0f, 480.0f);
+
+ArcBall myArcBall(window_width, window_height);
 Vec2 MousePt;
-
-// Planet parameters
-Vec3 center(0.0,0.0,0.0); 
-Vec3 axis(0.0, 1.0, 0.0); 
-Vec3 longitude_zero(0.0, 0.0, 1.0); 
-float radius = 1.0;
-int k = 4;
-
-Planet myPlanet(center, axis, longitude_zero, radius, k);
-
-// Debugging flags
-bool drawPlanet = true;
-bool drawWireframe = false;
-bool drawSelectionField = false;
-bool drawAxis = true;
-bool drawCell = false;
-bool drawTempCell = false;
-bool drawBoundingBox = false;
-bool drawSkybox = true;
 
 float xi, yi;
 bool leftButtonDown = false;
@@ -73,49 +86,46 @@ float zoom = 0.0; // distance from the planet center
 Quat lastQuat, rotQuat, curQuat;
 Vec3 cursorPos(0.0f, 0.0f, 0.0f);
 Vec3 cursorDir;
-
 size_t cursorCellId = 0;
-
 Vec3 cursorRadial_selected;
 Vec3 cursorRadial;
-
-unsigned int PickBuffer[PICK_BUFFER_SIZE]; // picking buffer
 
 size_t selectionCounter = 0;
 bool siloSelected = false;
 bool targetSelected = false;
+bool drawTempCell = false;
 
-float spin = 0.2 * PIOVER180;
-bool worldSpins = true;
+// Planet parameters
+Vec3 m_center(0.0,0.0,0.0); 
+Vec3 m_axis(0.0, 1.0, 0.0); 
+Vec3 m_longitude_zero(0.0, 0.0, 1.0); 
+float m_radius = 1.0;
+int m_subdLevel = 4;
+
+//Planet myPlanet(center, axis, longitude_zero, radius, k);
+Planet m_planet( m_subdLevel );
 
 void initGL();
 void viewOrtho(int x, int y);
-void ViewPerspective(void);
+void viewPerspective();
 void renderButtons();
-void renderBoundingBox();
-void renderSkybox();
-void buildPlanet();
-float z(float x, float y);
-Vec3 trackballProject(float x, float y);
-void trackballRotate(float x1, float y1, float x2, float y2);
-void trackballRotate_mouse(Vec3 v1, Vec3 v2);
-void rotateScene_hrot(float offset);
-void rotateScene_vrot(float offset);
-void drawScene();
-void resize(int w, int h);
-void translateX(float offset);
-void translateY(float offset);
-void translateZ(float offset);
-void rotateX(float offset);
-void rotateY(float offset);
-void handleKeyPress(unsigned char key, int x, int y);
+void drawMain();
+void initPlanet(int k);
+void drawPlanet();
+void drawTheatre();
+void drawMovie();
 Vec3 getGLPos(int x, int y);
 void getGLPosDir(int x, int y, Vec3& rayPos, Vec3& rayDir);
+void resize(int w, int h);
+void display();
 void motionUpdate();
 void mouseButton(int button, int state, int x, int y);
 void mouseMotion(int x, int y);
 void passiveMotion(int x, int y);
 void idle();
+void handleKeyPress(unsigned char key, int x, int y);
+void processSpecialKeys(int key, int x, int y);
+
 
 void initGL(){
     glEnable(GL_DEPTH_TEST);
@@ -148,9 +158,6 @@ void initGL(){
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
     glLightfv(GL_LIGHT0, GL_POSITION, light0_direction);
     glEnable(GL_LIGHT0);
-    
-    // GL selection buffer.
-    glSelectBuffer( PICK_BUFFER_SIZE, PickBuffer );
 }
 
 void viewOrtho(int x, int y){							// Set Up An Ortho View
@@ -163,7 +170,7 @@ void viewOrtho(int x, int y){							// Set Up An Ortho View
 	glLoadIdentity();						// Reset The Matrix
 }
 
-void viewPerspective(void){							// Set Up A Perspective View
+void viewPerspective(){							// Set Up A Perspective View
 	glMatrixMode( GL_PROJECTION );					// Select Projection
 	glPopMatrix();							// Pop The Matrix
 	glMatrixMode( GL_MODELVIEW );					// Select Modelview
@@ -212,180 +219,15 @@ void renderButtons(){
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_LIGHTING);
     
-    /*
-    glDisable(GL_LIGHTING);
-    glBegin(GL_QUADS);
-        // Red Button
-        glColor3f(1, 0, 0);
-        glVertex3f();
-        glVertex3f();
-        glVertex3f();
-        glVertex3f();
-        // Green Button
-        glColor3f(0, 1, 0);
-        glVertex3f();
-        glVertex3f();
-        glVertex3f();
-        glVertex3f();
-        // Blue Button
-        glColor3f(0, 0, 1);
-        glVertex3f();
-        glVertex3f();
-        glVertex3f();
-        glVertex3f();
-    glEnd();
-    glEnable(GL_LIGHTING);
-    */
 }
 
-void renderBoundingBox(){
-    glDisable(GL_LIGHTING);
-    glBegin(GL_LINES);
-    {
-        glColor3f(1.0f, 1.0f, 1.0f);
-
-        glVertex3f(1, 1, 1); 
-        glVertex3f(1, -1, 1);
-        glVertex3f(1, -1, 1);
-        glVertex3f(-1, -1, 1);
-        glVertex3f(-1, -1, 1);
-        glVertex3f(-1, 1, 1);
-        glVertex3f(-1, 1, 1);
-        glVertex3f(1, 1, 1);
-
-        glVertex3f(1, 1, -1);
-        glVertex3f(1, -1, -1);
-        glVertex3f(1, -1, -1);
-        glVertex3f(-1, -1, -1);
-        glVertex3f(-1, -1, -1);
-        glVertex3f(-1, 1, -1);
-        glVertex3f(-1, 1, -1);
-        glVertex3f(1, 1, -1);
-
-        glVertex3f(1, 1, 1);
-        glVertex3f(1, 1, -1);
-        glVertex3f(1, -1, 1);
-        glVertex3f(1, -1, -1);
-        glVertex3f(-1, -1, 1);
-        glVertex3f(-1, -1, -1);
-        glVertex3f(-1, 1, 1);
-        glVertex3f(-1, 1, -1);
-    }
-    glEnd();
-    glEnable(GL_LIGHTING);
-}
-
-void renderSkybox(){
+void drawMain(){
     
-}
-
-void buildPlanet(){
-    myPlanet.init();
-}
-
-float z(float x, float y){
-    float x2 = x*x;
-    float y2 = y*y;
-    float r2 = 1.0;
-    if(x2 + y2 <= r2 * 0.5){
-        return sqrt( r2 - (x2 + y2) );
-    }
-    else{
-        return r2 * 0.5 / sqrt(x2 + y2);
-    }
-}
-
-Vec3 trackballProject(float x, float y){
-    //x = x - window_width * 0.5 - center[0];
-    //y = y - window_height * 0.5 - center[1];
-    return Vec3(x, y, z(x,y)).normalize();
-}
-
-void trackballRotate(float x1, float y1, float x2, float y2){
-    Vec3 v1 = trackballProject(x1, y1);
-    Vec3 v2 = trackballProject(x2, y2);
-    Vec3 normal = v1 ^ v2;
-    float theta = acos(v1*v2);
-    rotQuat.fromAxis(normal, theta);
-    curQuat = lastQuat * rotQuat;
-    lastQuat = curQuat;
-}
-
-void trackballRotate_mouse(Vec3 v1, Vec3 v2){
-    Vec3 normal = v1 ^ v2;
-    float theta = acos(v1*v2);
-    rotQuat.fromAxis(normal, theta);
-    curQuat = lastQuat * rotQuat;
-    lastQuat = curQuat;
-}
-
-void rotateScene_hrot(float offset){
-    trackballRotate(0.0, 0.0, offset, 0.0);
-}
-
-void rotateScene_vrot(float offset){
-    trackballRotate(0.0, 0.0, 0.0, offset);
-}
-
-void drawScene(void){
-    motionUpdate();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear Screen And Depth Buffer
     glLoadIdentity(); // Reset The Current Modelview Matrix
     
-    glTranslatef(0.0f, 0.0f, -3.0f); // Move Into The Screen 3.0
-    glTranslatef(0.0f, 0.0f, -zoom);
-    
-    if(worldSpins){
-        Mat3 rotY(cos(spin), 0, sin(spin),
-                  0, 1, 0, 
-                  -sin(spin), 0, cos(spin));
-        curRot = curRot * rotY;
-        transform.setRot(curRot);
-    }
-    
-    /*
-    glDisable(GL_LIGHTING);
-    glPointSize(5.0);
-    glBegin(GL_POINTS);
-        glColor3f(1, 0, 0);
-        glVertex3f(cursorPos.x, -cursorPos.y, cursorPos.z);
-    glEnd();
-    glPointSize(1.0);
-    glEnable(GL_LIGHTING);
-    */
-    
     glPushMatrix(); // Prepare Dynamic transform
-        glMultMatrixf(transform.n);
-        //glMultMatrixf(curQuat.getMatrix().n);
         
-        if(drawAxis) myPlanet.renderAxis();
-        if(drawWireframe) myPlanet.renderWireframe();
-        if(drawSelectionField) myPlanet.renderCells();
-        if(drawPlanet){
-            glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-            myPlanet.renderEarth();
-        }
-        if(drawCell){
-            cursorCellId = myPlanet.getCellIdAt(cursorRadial_selected);
-            if(siloSelected) glColor3f(0.0,1.0,0.0);
-            else if(targetSelected) glColor3f(1.0,0.0,0.0);
-            glDisable(GL_LIGHTING);
-            glLineWidth( 3.0f );
-            myPlanet.renderCellBoundary(myPlanet.cells[cursorCellId]);
-            glLineWidth( 1.0f );
-            glEnable(GL_LIGHTING);
-        }
-        if(drawBoundingBox) renderBoundingBox();
-        if(drawSkybox) renderSkybox();
-        if(drawTempCell){
-            cursorCellId = myPlanet.getCellIdAt(cursorRadial);
-            glColor3f(1.0,1.0,1.0);
-            glDisable(GL_LIGHTING);
-            glLineWidth( 3.0f );
-            myPlanet.renderCellBoundary(myPlanet.cells[cursorCellId]);
-            glLineWidth( 1.0f );
-            glEnable(GL_LIGHTING);
-        }
         renderButtons();
         
     glPopMatrix(); // Unapply Dynamic transform
@@ -393,75 +235,56 @@ void drawScene(void){
     glFlush(); // Flush The GL Rendering Pipeline
 }
 
-void display(){
-    drawScene();
-    glutSwapBuffers();
+void initPlanet( int k ){
+    m_planet = Planet( k );
+    
+    // Load texture images
+    Image* image;
+    
+    image = loadBMP("data/texture/earth/earth_day.bmp");
+    texId_day = loadTexture(image);
+    
+    image = loadBMP("data/texture/earth/earth_night.bmp");
+    texId_night = loadTexture(image);
+    
+    image = loadBMP("data/texture/earth/earth_pop.bmp");
+    texId_pop = loadTexture(image);
+    
+    image = loadBMP("data/texture/earth/earth_terrain.bmp");
+    texId_terrain = loadTexture(image);
+    
+    image = loadBMP("data/texture/earth/earth_spec.bmp");
+    texId_spec = loadTexture(image);
+    
+    delete image;
 }
 
-void resize(int w, int h){
-    window_width = w;
-    window_height = h;
-    glViewport(0, 0, w, h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    myArcBall.setBounds((GLfloat)w, (GLfloat)h);
+void drawPlanet(){
+    motionUpdate();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear Screen And Depth Buffer
+    glLoadIdentity(); // Reset The Current Modelview Matrix
+    glTranslatef(0.0f, 0.0f, -3.0f); // Move Into The Screen 3.0
+    glTranslatef(0.0f, 0.0f, -zoom); 
+    
+    //m_planet.draw( Planet::DrawMode_MESH );
+    
+    glPushMatrix(); // Prepare Dynamic transform
+        glMultMatrixf(transform.n);
+        //glMultMatrixf(curQuat.getMatrix().n);
+        
+        m_planet.draw( Planet::DrawMode_MESH );
+        
+    glPopMatrix(); // Unapply Dynamic transform
+    
+    glFlush(); // Flush The GL Rendering Pipeline
 }
 
-void handleKeyPress(unsigned char key, int x, int y){
-    switch (key) {
-        case '[': 
-            if(k > 0) k--; 
-            myPlanet.complexity = k; 
-            myPlanet.init(); 
-            break;
-        case ']': 
-            if(k < 7) k++; 
-            myPlanet.complexity = k; 
-            myPlanet.init();
-            break;
-        case 'w':
-            rotateScene_vrot(-1.0f * PIOVER180);
-            break;
-        case 's':
-            rotateScene_vrot(1.0f * PIOVER180);
-            break;
-        case 'd':
-            rotateScene_hrot(-1.0f * PIOVER180);
-            break;
-        case 'a':
-            rotateScene_hrot(1.0f * PIOVER180);
-            break;
-        case 'f':
-            if(drawSelectionField) drawSelectionField = false;
-            else drawSelectionField = true;
-            break;
-        case 'g':
-            if(drawPlanet) drawPlanet = false;
-            else drawPlanet = true;
-            break;
-        case 'h':
-            if(drawAxis) drawAxis = false;
-            else drawAxis = true;
-            break;
-        case ' ': //#define SPACEBAR 32
-            curQuat.clear();
-            lastQuat.clear();
-            if(worldSpins) worldSpins = false;
-            else worldSpins = true;
-            break;
-        case ',':
-            zoom -= 0.1;
-            break;
-        case '.':
-            zoom += 0.1;
-            break;
-        case 27: //Escape key
-            exit(0);
-    }
-    glutPostRedisplay();
+void drawTheatre(){
+    
+}
+
+void drawMovie(){
+    
 }
 
 Vec3 getGLPos(int x, int y){
@@ -528,6 +351,31 @@ void getGLPosDir(int x, int y, Vec3& rayPos, Vec3& rayDir){
     rayDir.normalize();
 }
 
+void resize(int w, int h){
+    window_width = w;
+    window_height = h;
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0, (float)w / (float)h, 0.01, 100.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    myArcBall.setBounds((GLfloat)w, (GLfloat)h);
+}
+
+void display(){
+    if (gameState == Game_MAIN){
+        drawMain();
+    }
+    else if (gameState == Game_PLANET){
+        drawPlanet();
+    }
+    else if (gameState == Game_LOADING){
+        drawMovie();
+    }
+    glutSwapBuffers();
+}
+
 void motionUpdate(){ // Perform Motion Updates Here
     if (middleButtonDown){ // If Right Mouse Clicked, Reset All Rotations
         lastRot.setIdentity(); // Reset Rotation
@@ -561,7 +409,7 @@ void mouseButton(int button, int state, int x, int y){
     MousePt.y = y;
     y = window_height - y;
     
-    if(button == GLUT_LEFT_BUTTON){ // orbitCam
+    if(button == GLUT_LEFT_BUTTON){
         if(state == GLUT_UP){
             //glRenderMode( GL_RENDER );
             leftButtonDown = false; 
@@ -577,10 +425,10 @@ void mouseButton(int button, int state, int x, int y){
             getGLPosDir(x, y, cursorPos, cursorDir);
             //cursorDir.x = cursorDir.x;
             //cursorDir.y = cursorDir.y;
-            if(myPlanet.rayHitPlanet(cursorPos, cursorDir, cursorRadial_selected)){
+            if(m_planet.rayHitPlanet(cursorPos, cursorDir, cursorRadial_selected)){
                 cursorRadial_selected.y = -cursorRadial_selected.y;
                 cursorRadial_selected = curRot*cursorRadial_selected;
-                drawCell = true;
+                //drawCell = true;
                 if(selectionCounter == 0){
                     selectionCounter = 1;
                     siloSelected = true;
@@ -598,7 +446,7 @@ void mouseButton(int button, int state, int x, int y){
             drawTempCell = false;
         }
     }
-    if(button == GLUT_MIDDLE_BUTTON){ // panObj
+    if(button == GLUT_MIDDLE_BUTTON){
         if(state == GLUT_UP){
             middleButtonDown = false;
             xi = -1;
@@ -610,7 +458,7 @@ void mouseButton(int button, int state, int x, int y){
             yi = y;
         }
     }
-    if(button == GLUT_RIGHT_BUTTON){ // zoom
+    if(button == GLUT_RIGHT_BUTTON){
         if(state == GLUT_UP){
             rightButtonDown = false;
             xi = -1;
@@ -623,6 +471,13 @@ void mouseButton(int button, int state, int x, int y){
         }
         drawTempCell = false;
     }
+    if(button == 3){ // MOUSE_SCROLL_UP
+        zoom -= 0.01;
+    }
+    if(button == 4){ // MOUSE_SCROLL_DOWN
+        zoom += 0.01;
+    }
+    
     
     glutPostRedisplay();
 }
@@ -669,13 +524,15 @@ void mouseMotion(int x, int y){
 void passiveMotion(int x, int y){
     y = window_height - y;
     getGLPosDir(x, y, cursorPos, cursorDir);
-    if(myPlanet.rayHitPlanet(cursorPos, cursorDir, cursorRadial)){
+    if(m_planet.rayHitPlanet(cursorPos, cursorDir, cursorRadial)){
         cursorRadial.y = -cursorRadial.y;
         cursorRadial = curRot*cursorRadial;
         drawTempCell = true;
+        cout << "";
     }
     else{
         drawTempCell = false;
+        cout << "";
     }
 }
 
@@ -683,25 +540,143 @@ void idle(){
     glutPostRedisplay();
 }
 
+void handleKeyPress(unsigned char key, int x, int y){
+    switch (key) {
+        case '[': 
+            if(m_subdLevel > 0) m_subdLevel--;  
+            initPlanet(m_subdLevel); 
+            break;
+        case ']': 
+            if(m_subdLevel < 6) m_subdLevel++; 
+            initPlanet(m_subdLevel);
+            break;
+        /*
+        case 'w':
+            rotateScene_vrot(-1.0f * PIOVER180);
+            break;
+        case 's':
+            rotateScene_vrot(1.0f * PIOVER180);
+            break;
+        case 'd':
+            rotateScene_hrot(-1.0f * PIOVER180);
+            break;
+        case 'a':
+            rotateScene_hrot(1.0f * PIOVER180);
+            break;
+        case 'f':
+            if(drawSelectionField) drawSelectionField = false;
+            else drawSelectionField = true;
+            break;
+        case 'g':
+            if(drawPlanet) drawPlanet = false;
+            else drawPlanet = true;
+            break;
+        case 'h':
+            if(drawAxis) drawAxis = false;
+            else drawAxis = true;
+            break;
+        case ' ': //#define SPACEBAR 32
+            curQuat.clear();
+            lastQuat.clear();
+            if(worldSpins) worldSpins = false;
+            else worldSpins = true;
+            break;
+        case ',':
+            zoom -= 0.1;
+            break;
+        case '.':
+            zoom += 0.1;
+            break;
+        */
+        case 27: //Escape key
+            exit(0);
+    }
+    glutPostRedisplay();
+}
+
+void processSpecialKeys(int key, int x, int y){
+    switch (key) {
+        case GLUT_KEY_UP : 
+            //if(gameState == 0)
+            cout << "Keyboard input: UP" << endl;
+            break;
+        case GLUT_KEY_DOWN : 
+            cout << "Keyboard input: DOWN" << endl;
+            break;
+        case GLUT_KEY_LEFT : 
+            cout << "Keyboard input: LEFT" << endl;
+            break;
+        case GLUT_KEY_RIGHT : 
+            cout << "Keyboard input: RIGHT" << endl;
+            break;
+        case GLUT_KEY_F1 : 
+            cout << "Keyboard input: F1" << endl; //Open in-game menu
+            break;
+        case GLUT_KEY_F2 : 
+            cout << "Keyboard input: F2" << endl; 
+            break;
+        case GLUT_KEY_F3 : 
+            cout << "Keyboard input: F3" << endl; 
+            break;
+        case GLUT_KEY_F4 : 
+            cout << "Keyboard input: F4" << endl; 
+            break;
+        case GLUT_KEY_F5 : 
+            cout << "Keyboard input: F5" << endl; //Quick save
+            break;
+        case GLUT_KEY_F6 : 
+            cout << "Keyboard input: F6" << endl; 
+            break;
+        case GLUT_KEY_F7 : 
+            cout << "Keyboard input: F7" << endl; 
+            break;
+        case GLUT_KEY_F8 : 
+            cout << "Keyboard input: F8" << endl; //Quick load
+            break;
+        case GLUT_KEY_F9 : 
+            cout << "Keyboard input: F9" << endl; //Adjust brightness
+            break;
+        case GLUT_KEY_F10 : 
+            cout << "Keyboard input: F10" << endl; //Adjust contrast
+            break;
+        case GLUT_KEY_F11 : 
+            cout << "Keyboard input: F11" << endl; //Adjust gamma
+            break;
+        case GLUT_KEY_F12 : 
+            cout << "Keyboard input: F12" << endl; //Take screenshot
+            break;
+    }
+}
+
 int main(int argc, char** argv) {
+    //cout << "Hello World!" << endl; 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(window_width, window_height);
-    
     glutCreateWindow("Global Thermonuclear War");
     
     initGL();
-    buildPlanet();
-
+    initPlanet( m_subdLevel );
+    
     glutDisplayFunc(display);
-    glutKeyboardFunc(handleKeyPress);
     glutReshapeFunc(resize);
+    glutKeyboardFunc(handleKeyPress);
+    glutSpecialFunc(processSpecialKeys);
     glutMouseFunc(mouseButton);
     glutMotionFunc(mouseMotion);
     glutPassiveMotionFunc(passiveMotion);
     glutIdleFunc(idle);
     
+    //Main Menu
+    
+    //Single Player
+    //Multi Player
+    //Options
+    //Credits
+    //Quit
+    
     glutMainLoop();
+    
     return 0;
 }

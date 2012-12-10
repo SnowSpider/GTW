@@ -11,55 +11,32 @@
 #define TOLERANCE 0.00001f
 #define PIOVER180 0.01745329252
 
-Quat::Quat(){
+Quat::Quat(){ //default constructor
     x = y = z = 0;
     w = 1;
 }
-Quat::Quat( const float x, const float y, const float z, const float w ){
+Quat::Quat( const float x, const float y, const float z, const float w ){ //parametric constructor
     this->x = x;
     this->y = y;
     this->z = z;
     this->w = w;
 }
-Quat::Quat( const Quat& q ){
-    *this = q;
+Quat::Quat( const Quat& q ){ //copy constructor
+    this->x = q.x;
+    this->y = q.y;
+    this->z = q.z;
+    this->w = q.w;
+}
+Quat& Quat::operator=( const Quat& q ){ //copy-assignment operator
+    x = q.x;
+    y = q.y;
+    z = q.z;
+    w = q.w;
 }
 void Quat::clear(){
-    x = y = z = 0;
+    x = y = z = w = 0;
 }
-void Quat::set( const Vec3& v ){
-    x = v.x;
-    y = v.y;
-    z = v.z;
-}
-void Quat::set( const Quat& q ){
-    x = q.x;
-    y = q.y;
-    z = q.z;
-    w = q.w;
-}
-void Quat::negative(const Quat& q){
-    x = -q.x;
-    y = -q.y;
-    z = -q.z;
-    w = q.w;
-}
-Quat& Quat::operator=( const Quat& q ){
-    x = q.x;
-    y = q.y;
-    z = q.z;
-    w = q.w;
-    return *this; 
-}
-bool Quat::operator==(const Quat& q) const {
-    return memcmp(array, q.array, sizeof(float)*4)==0;
-}
-float& Quat::operator[](const int i){
-    return array[i];
-}
-float Quat::operator []( int i ) const {
-    return array[i];
-}
+
 
 // normalising a Quat works similar to a vector. This method will not do anything
 // if the Quat is close enough to being unit-length. define TOLERANCE as something
@@ -321,5 +298,3 @@ Quat Quat::slerp(Quat& rq, float t){
     ret.z = scale0 * z + scale1 * temp[2];
     ret.w = scale0 * w + scale1 * temp[3];
 }
-
-

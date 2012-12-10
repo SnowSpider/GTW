@@ -1,6 +1,13 @@
 #ifndef IMAGE_LOADER_H_INCLUDED
 #define IMAGE_LOADER_H_INCLUDED
 
+#ifdef __APPLE__
+#include <OpenGL/OpenGL.h>
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
 //Represents an image
 class Image {
 	public:
@@ -20,5 +27,6 @@ class Image {
 
 //Reads a bitmap image from file.
 Image* loadBMP(const char* filename);
+GLuint loadTexture(Image* image);
 
 #endif

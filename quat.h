@@ -8,21 +8,29 @@ using namespace std;
 class Quat{
     public:
     union {
-        float array[4]; // The 4D low level array representation to pass the vector as pointer parameter
-        struct{ float x,y,z,w; }; // Components X, Y, Z and W to be used by the application
+        float array[4]; 
+        struct{ float x,y,z,w; }; 
     };
-    Quat();
-    Quat( const float x, const float y, const float z, const float w );
-    Quat( const Quat& q );
+    Quat(); //default constructor
+    Quat( const float x, const float y, const float z, const float w ); //parametric constructor
+    Quat( const Quat& q ); //copy constructor
+    Quat& operator=( const Quat& q ); //copy-assinment operator
     
-    void clear();
-    void set( const Vec3& v );
-    void set( const Quat& q );
-    void negative(const Quat& q);
-    Quat& operator=( const Quat& q );
-    bool operator==(const Quat& q) const ;
-    float& operator[](const int i);
+    float& operator []( int i ); //subscript
     float operator []( int i ) const;
+    
+    bool equals(const Quat& q);
+    void clear();
+    
+    //addition
+    //subtraction
+    //multiplication
+    //division
+    
+    //addition assignment
+    //subtraction assignment
+    //multiplication assignment
+    //division assignment
     
     void normalize();
     Quat getConjugate() const; 

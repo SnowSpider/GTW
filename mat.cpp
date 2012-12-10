@@ -9,79 +9,92 @@
 
 using namespace std;
 
-Mat3::Mat3(){ 
-    n[0] = 0.0;
-    n[1] = 0.0;
-    n[2] = 0.0;
-    n[3] = 0.0;
-    n[4] = 0.0;
-    n[5] = 0.0;
-    n[6] = 0.0;
-    n[7] = 0.0;
-    n[8] = 0.0;
+Mat3::Mat3(){ //default constructor
+    memset(n, 0, sizeof(n));
 }
-    
 Mat3::Mat3( const float m00, const float m10, const float m20,
             const float m01, const float m11, const float m21,
-            const float m02, const float m12, const float m22 ){ 
-    n[0] = m00; 
-    n[1] = m10; 
+            const float m02, const float m12, const float m22 ){ //parametric constructor
+    n[0] = m00;
+    n[1] = m10;
     n[2] = m20;
-    n[3] = m01; 
-    n[4] = m11; 
+    n[3] = m01;
+    n[4] = m11;
     n[5] = m21;
-    n[6] = m02; 
-    n[7] = m12; 
+    n[6] = m02;
+    n[7] = m12;
     n[8] = m22;
 }
-
-float& Mat3::operator [](int i) { 
+float& Mat3::operator [](int i) { //subscript
     return n[i];
 }
 float Mat3::operator []( int i ) const {
     return n[i];
 }
-
-Mat3::Mat3( const Mat3& m ){
+Mat3::Mat3( const Mat3& m ){ //copy constructor
     n[0] = m[0];
-    n[1] = m[1]; 
+    n[1] = m[1];
     n[2] = m[2];
-    n[3] = m[3]; 
-    n[4] = m[4]; 
+    n[3] = m[3];
+    n[4] = m[4];
     n[5] = m[5];
-    n[6] = m[6]; 
-    n[7] = m[7]; 
+    n[6] = m[6];
+    n[7] = m[7];
     n[8] = m[8];
 }
-
-Mat3& Mat3::operator=( const Mat3& m ){
+Mat3& Mat3::operator=( const Mat3& m ){ //copy-assinment operator
     n[0] = m[0];
-    n[1] = m[1]; 
+    n[1] = m[1];
     n[2] = m[2];
-    n[3] = m[3]; 
-    n[4] = m[4]; 
+    n[3] = m[3];
+    n[4] = m[4];
     n[5] = m[5];
-    n[6] = m[6]; 
-    n[7] = m[7]; 
+    n[6] = m[6];
+    n[7] = m[7];
     n[8] = m[8];
     return *this;
 }
-
-void Mat3::setIdentity(){
-    memset(n, 0, sizeof(float) * 9);
-    m00 = m11 = m22 = 1.0f;
+/*
+Mat3::~Mat3(){ //destructor
+    delete[] n;
 }
-    
-Vec3 Mat3::operator*( const Vec3& v ) const {
-    Vec3 result;
+*/
+bool Mat3::equals(const Mat3& m){
+    for(int i=0;i<9;i++){
+        if(n[i] != m[i]) return false;
+    }
+    return true;
+}
+void Mat3::clear(){
+    memset(n, 0, sizeof(n));
+}
+void Mat3::setIdentity(){
+    memset(n, 0, sizeof(n));
+    m00 = m11 = m22 = 1.0;
+}
+Mat3 Mat3::operator+( const Mat3& m ) const { //addition
+    Mat3 ret;
+    for(int i=0;i<9;i++){
+        ret[i] = n[i] + m[i];
+    }
+    return ret;
+}
+Mat3 Mat3::operator-( const Mat3& m ) const { //subtraction
+    Mat3 ret;
+    for(int i=0;i<9;i++){
+        ret[i] = n[i] - m[i];
+    }
+    return ret;
+}
+Vec3 Mat3::operator*( const Vec3& v ) const { //multiplication
+    Vec3 ret;
     for(int i=0;i<3;i++){
         for(int j=0;j<3;j++){
-            result[i] += n[i*3 + j] * v[j]; 
+            ret[i] += n[i*3 + j] * v[j]; 
         }
     }
-    return result;
+    return ret;
 }
-
 Mat3 Mat3::operator*( const Mat3& m ) const {
     Mat3 ret;
     
@@ -99,8 +112,24 @@ Mat3 Mat3::operator*( const Mat3& m ) const {
     
     return ret;
 }
-
-Mat3& Mat3::operator*=( const Mat3& m ){
+Mat3 Mat3::operator*( const float& m ) const { //scalar multiplication
+    Mat3 ret;
+    for(int i=0;i<9;i++){
+        ret[i] = n[i] * m;
+    }
+    return ret;
+}
+Mat3 Mat3::operator+=( const Mat3& m ) { //addition assignment
+    for(int i=0;i<9;i++){
+        n[i] += m[i];
+    }
+}
+Mat3 Mat3::operator-=( const Mat3& m ) { //subtraction assignment
+    for(int i=0;i<9;i++){
+        n[i] -= m[i];
+    }
+}
+Mat3& Mat3::operator*=( const Mat3& m ) { //multiplication assignment
     Mat3 ret;
     
     ret.m00 = (m00 * m.m00) + (m01 * m.m10) + (m02 * m.m20);
@@ -119,53 +148,29 @@ Mat3& Mat3::operator*=( const Mat3& m ){
     
     return *this;
 }
-
-/*
-
-void Mat3::setRotation( const Quat& q ){
-    float n, s;
-    float xs, ys, zs; //s stands for scale
-    float wx, wy, wz;
-    float xx, xy, xz;
-    float yy, yz, zz;
-
-    n = (q.x * q.x) + (q.y * q.y) + (q.z * q.z) + (q.w * q.w);
-    s = (n > 0.0f) ? (2.0f / n) : 0.0f;
-
-    xs = q.x * s;  ys = q.y * s;  zs = q.z * s;
-    wx = q.w * xs; wy = q.w * ys; wz = q.w * zs;
-    xx = q.x * xs; xy = q.x * ys; xz = q.x * zs;
-    yy = q.y * ys; yz = q.y * zs; zz = q.z * zs;
-
-    m00 = 1.0f - (yy + zz); m10 =         xy - wz;  m20 =         xz + wy;
-    m01 =         xy + wz;  m11 = 1.0f - (xx + zz); m21 =         yz - wx;
-    m02 =         xz - wy;  m12 =         yz + wx;  m22 = 1.0f - (xx + yy);
+Mat3 Mat3::transpose(){
+    Mat3 ret;
+    ret[0] = n[0];
+    ret[1] = n[3];
+    ret[2] = n[6];
+    ret[3] = n[1];
+    ret[4] = n[4];
+    ret[5] = n[7];
+    ret[6] = n[2];
+    ret[7] = n[5];
+    ret[8] = n[8];
+}
+float Mat3::determinant(){
+    return n[0]*n[4]*n[8] + n[3]*n[7]*n[2] + n[6]*n[1]*n[5] - n[6]*n[4]*n[2] - n[3]*n[1]*n[8] - n[0]*n[7]*n[5];
 }
 
-*/
-
-Mat4::Mat4(){
-    memset(n, 0, sizeof(float) * 16);
-    n[0] = n[5] = n[10] = n[15] = 1.0f;
+Mat4::Mat4(){ //default constructor
+    memset(n, 0, sizeof(n));
 }
-
-Mat4::Mat4(float matrix[16]){
-    memcpy((void*)n, (void*)matrix, sizeof(float) * 16);
-}
-
-/*
-A 4x4 matrix
-
-      | 0   4   8  12 |
-  m = | 1   5   9  13 |
-      | 2   6  10  14 |
-      | 3   7  11  15 |
-*/
-
 Mat4::Mat4(float n00, float n10, float n20, float n30,
            float n01, float n11, float n21, float n31,
            float n02, float n12, float n22, float n32,
-           float n03, float n13, float n23, float n33){
+           float n03, float n13, float n23, float n33){ //parametric constructor
     n[0] = n00;
     n[1] = n10; 
     n[2] = n20; 
@@ -183,15 +188,13 @@ Mat4::Mat4(float n00, float n10, float n20, float n30,
     n[14] = n23; 
     n[15] = n33; 
 }
-
-float& Mat4::operator []( int i ){
+float& Mat4::operator []( int i ){ //subscript
     return n[i];
 }
 float Mat4::operator []( int i ) const {
     return n[i];
 }
-
-Mat4::Mat4( const Mat4& m ){
+Mat4::Mat4( const Mat4& m ){ //copy constructor
     n[0] = m[0]; 
     n[1] = m[1]; 
     n[2] = m[2]; 
@@ -209,8 +212,7 @@ Mat4::Mat4( const Mat4& m ){
     n[14] = m[14]; 
     n[15] = m[15]; 
 }
-
-Mat4& Mat4::operator=( const Mat4& m ){
+Mat4& Mat4::operator=( const Mat4& m ){ //copy-assinment operator
     n[0] = m[0]; 
     n[1] = m[1]; 
     n[2] = m[2]; 
@@ -229,6 +231,29 @@ Mat4& Mat4::operator=( const Mat4& m ){
     n[15] = m[15]; 
     return *this;
 }
+/*
+Mat4::~Mat4(){ //destructor
+    delete[] n;
+}
+*/
+bool Mat4::equals(const Mat4& m){
+    for(int i=0;i<16;i++){
+        if(n[i] != m[i]) return false;
+    }
+    return true;
+}
+void Mat4::clear(){
+    memset(n, 0, sizeof(n));
+}
+void Mat4::setIdentity(){
+    memset(n, 0, sizeof(n));
+    m00 = m11 = m22 = m33 = 1.0;
+}
+
+
+
+
+
 
 Mat4& Mat4::operator=( const Mat3& m ){
     m00 = m.m00; m10 = m.m10; m20 = m.m20;
@@ -417,9 +442,9 @@ Mat4 Mat4::CreatePerspectiveProjection(float fovY, float aspect, float zNear, fl
     float s = sin(r);
     float cotangent = 0;
 
-    if (deltaZ == 0 || s == 0 || aspect == 0)
-    {
-        return NULL;
+    if (deltaZ == 0 || s == 0 || aspect == 0) {
+        //return NULL;
+        return Mat4();
     }
 
     //cos(r) / sin(r) = cot(r)
@@ -463,13 +488,13 @@ Mat4 Mat4::CreateLookAt(const Vec3& pEye, const Vec3& pCenter, const Vec3& pUp){
     Vec3 f, up, s, u;
     Mat4 translate, out;
 
-    f = (pCenter - pEye).normalized();
+    f = normalize(pCenter - pEye);
 
-    up = pUp.normalized();
+    up = normalize(pUp);
 
-    s = (f^up).normalized();
+    s = normalize(f^up);
 
-    u = (s^f).normalized();
+    u = normalize(s^f);
 
     out[0] = s.x;
     out[4] = s.y;
@@ -530,7 +555,8 @@ Mat4 Mat4::Inverse() const {
         // Scale row j to have a unit diagonal
         if (!tmat[j*4 + j]){
             // Singular matrix - can't invert
-            return NULL;
+            //return NULL;
+            return Mat4();
         }
 
         for (k = 0; k < 4; k++){
